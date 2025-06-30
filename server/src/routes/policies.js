@@ -10,6 +10,13 @@ import { logInteraction } from "../utils/logInteraction.js";
 
 const router = express.Router();
 
+/**
+ * @swagger
+ * tags:
+ *   name: Policies
+ *   description: Policy document management
+ */
+
 // storage config
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -23,6 +30,52 @@ const storage = multer.diskStorage({
   },
 });
 const upload = multer({ storage });
+
+/**
+ * @swagger
+ * /api/policies/upload:
+ *   post:
+ *     summary: Upload a new policy document
+ *     tags: [Policies]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - file
+ *               - title
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *               title:
+ *                 type: string
+ *               category:
+ *                 type: string
+ *                 default: other
+ *               summary_en:
+ *                 type: string
+ *               summary_sw:
+ *                 type: string
+ *               status:
+ *                 type: string
+ *                 default: published
+ *               budget:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Policy document uploaded successfully
+ *       400:
+ *         description: Validation error or file processing error
+ *       403:
+ *         description: Access denied - representative or admin required
+ *       500:
+ *         description: Server error
+ */
 
 // Upload policy document (representatives only)
 router.post("/upload", authenticate(["representative", "admin"]), upload.single("file"), async (req, res) => {
@@ -58,6 +111,50 @@ router.post("/upload", authenticate(["representative", "admin"]), upload.single(
   }
 });
 
+/**
+ * @swagger
+ * /api/policies:
+ *   get:
+ *     summary: List and search policy documents
+ *     tags: [Policies]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         schema:
+ *           type: string
+ *         description: Search query for title
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *         description: Filter by category
+ *     responses:
+ *       200:
+ *         description: Array of policy documents
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                   title:
+ *                     type: string
+ *                   category:
+ *                     type: string
+ *                   status:
+ *                     type: string
+ *                   createdAt:
+ *                     type: string
+ *                     format: date-time
+ *       500:
+ *         description: Server error
+ */
+
 // List/Search documents
 router.get("/", authenticate(), async (req, res) => {
   try {
@@ -74,6 +171,32 @@ router.get("/", authenticate(), async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/policies/{id}:
+ *   get:
+ *     summary: Get policy document metadata
+ *     tags: [Policies]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Policy document ID
+ *     responses:
+ *       200:
+ *         description: Policy document metadata
+ *       403:
+ *         description: Access denied - document not published
+ *       404:
+ *         description: Policy document not found
+ *       500:
+ *         description: Server error
+ */
+
 // Get metadata
 router.get("/:id", authenticate(), async (req, res) => {
   const doc = await PolicyDocument.findByPk(req.params.id);
@@ -82,6 +205,39 @@ router.get("/:id", authenticate(), async (req, res) => {
   await logInteraction(req.user.id, "policy_view", doc.id);
   res.json(doc);
 });
+
+/**
+ * @swagger
+ * /api/policies/{id}/file:
+ *   get:
+ *     summary: Download policy document file
+ *     tags: [Policies]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Policy document ID
+ *     responses:
+ *       200:
+ *         description: Policy document file
+ *         content:
+ *           application/pdf:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *           application/msword:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       403:
+ *         description: Access denied - document not published
+ *       404:
+ *         description: Policy document not found
+ */
 
 // Serve file
 router.get("/:id/file", authenticate(), async (req, res) => {

@@ -6,6 +6,52 @@ import { logInteraction } from "../utils/logInteraction.js";
 
 const router = express.Router();
 
+/**
+ * @swagger
+ * tags:
+ *   name: Polls
+ *   description: Polling and voting system
+ */
+
+/**
+ * @swagger
+ * /api/polls:
+ *   post:
+ *     summary: Create a new poll
+ *     tags: [Polls]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - question
+ *               - options
+ *             properties:
+ *               question:
+ *                 type: string
+ *               options:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 minItems: 2
+ *               multiple:
+ *                 type: boolean
+ *                 default: false
+ *     responses:
+ *       201:
+ *         description: Poll successfully created
+ *       400:
+ *         description: Validation error
+ *       403:
+ *         description: Access denied - representative required
+ *       500:
+ *         description: Server error
+ */
+
 // Create poll (representative)
 router.post("/", authenticate("representative"), async (req, res) => {
   try {
@@ -21,6 +67,43 @@ router.post("/", authenticate("representative"), async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/polls:
+ *   get:
+ *     summary: List all polls
+ *     tags: [Polls]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Array of polls
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                   question:
+ *                     type: string
+ *                   options:
+ *                     type: array
+ *                     items:
+ *                       type: string
+ *                   multiple:
+ *                     type: boolean
+ *                   status:
+ *                     type: string
+ *                   createdAt:
+ *                     type: string
+ *                     format: date-time
+ *       500:
+ *         description: Server error
+ */
+
 // List polls (all)
 router.get("/", authenticate(), async (req, res) => {
   try {
@@ -31,6 +114,30 @@ router.get("/", authenticate(), async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+
+/**
+ * @swagger
+ * /api/polls/{id}:
+ *   get:
+ *     summary: Get specific poll with results
+ *     tags: [Polls]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Poll ID
+ *     responses:
+ *       200:
+ *         description: Poll with voting results
+ *       404:
+ *         description: Poll not found
+ *       500:
+ *         description: Server error
+ */
 
 // Get poll with results
 router.get("/:id", authenticate(), async (req, res) => {
@@ -43,6 +150,48 @@ router.get("/:id", authenticate(), async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+
+/**
+ * @swagger
+ * /api/polls/{id}/vote:
+ *   post:
+ *     summary: Vote in a poll
+ *     tags: [Polls]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Poll ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - selected
+ *             properties:
+ *               selected:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                 description: Array of option indexes
+ *     responses:
+ *       200:
+ *         description: Vote successfully recorded
+ *       400:
+ *         description: Validation error or poll closed
+ *       403:
+ *         description: Access denied - citizen required
+ *       404:
+ *         description: Poll not found
+ *       500:
+ *         description: Server error
+ */
 
 // Vote in poll
 router.post("/:id/vote", authenticate("citizen"), async (req, res) => {

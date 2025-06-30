@@ -14,6 +14,45 @@ const router = express.Router();
 
 const { Parser } = json2csv;
 
+/**
+ * @swagger
+ * tags:
+ *   name: Analytics
+ *   description: Platform analytics and reporting
+ */
+
+/**
+ * @swagger
+ * /api/analytics:
+ *   get:
+ *     summary: Get platform engagement metrics
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Platform analytics data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 users:
+ *                   type: object
+ *                 issues:
+ *                   type: object
+ *                 messages:
+ *                   type: object
+ *                 polls:
+ *                   type: object
+ *                 forums:
+ *                   type: object
+ *       403:
+ *         description: Access denied - admin or representative required
+ *       500:
+ *         description: Server error
+ */
+
 // GET /api/analytics - return engagement metrics
 router.get("/", authenticate(["admin", "representative"]), async (req, res) => {
   try {
@@ -64,6 +103,27 @@ router.get("/", authenticate(["admin", "representative"]), async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/analytics/export/issues:
+ *   get:
+ *     summary: Export issues data as CSV
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: CSV file with issues data
+ *         content:
+ *           text/csv:
+ *             schema:
+ *               type: string
+ *       403:
+ *         description: Access denied - admin or representative required
+ *       500:
+ *         description: Server error
+ */
+
 // Export issues CSV
 router.get("/export/issues", authenticate(["admin", "representative"]), async (req, res) => {
   try {
@@ -77,6 +137,36 @@ router.get("/export/issues", authenticate(["admin", "representative"]), async (r
     res.status(500).json({ message: "Server error" });
   }
 });
+
+/**
+ * @swagger
+ * /api/analytics/geographic:
+ *   get:
+ *     summary: Get geographic engagement data
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Geographic engagement statistics
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   county:
+ *                     type: string
+ *                   ward:
+ *                     type: string
+ *                   issues:
+ *                     type: integer
+ *       403:
+ *         description: Access denied - admin or representative required
+ *       500:
+ *         description: Server error
+ */
 
 // Geographic engagement
 router.get("/geographic", authenticate(["admin", "representative"]), async (req, res) => {
@@ -93,6 +183,36 @@ router.get("/geographic", authenticate(["admin", "representative"]), async (req,
   }
 });
 
+/**
+ * @swagger
+ * /api/analytics/demographic:
+ *   get:
+ *     summary: Get demographic participation data
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Demographic participation statistics
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   ageRange:
+ *                     type: string
+ *                   gender:
+ *                     type: string
+ *                   interactions:
+ *                     type: integer
+ *       403:
+ *         description: Access denied - admin or representative required
+ *       500:
+ *         description: Server error
+ */
+
 // Demographic participation
 router.get("/demographic", authenticate(["admin", "representative"]), async (req, res) => {
   try {
@@ -108,6 +228,36 @@ router.get("/demographic", authenticate(["admin", "representative"]), async (req
   }
 });
 
+/**
+ * @swagger
+ * /api/analytics/policy:
+ *   get:
+ *     summary: Get policy engagement data
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Policy engagement statistics
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                   title:
+ *                     type: string
+ *                   views:
+ *                     type: integer
+ *       403:
+ *         description: Access denied - admin or representative required
+ *       500:
+ *         description: Server error
+ */
+
 // Policy engagement
 router.get("/policy", authenticate(["admin", "representative"]), async (req, res) => {
   try {
@@ -122,6 +272,36 @@ router.get("/policy", authenticate(["admin", "representative"]), async (req, res
     res.status(500).json({ message: "Server error" });
   }
 });
+
+/**
+ * @swagger
+ * /api/analytics/repScores:
+ *   get:
+ *     summary: Get representative accountability scores
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Representative performance metrics
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: string
+ *                   name:
+ *                     type: string
+ *                   avg_reply_seconds:
+ *                     type: number
+ *                   resolve_ratio:
+ *                     type: number
+ *       500:
+ *         description: Server error
+ */
 
 // Representative accountability scores
 router.get("/repScores", authenticate(), async (req, res) => {
@@ -151,6 +331,34 @@ router.get("/repScores", authenticate(), async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+
+/**
+ * @swagger
+ * /api/analytics/me:
+ *   get:
+ *     summary: Get current user's activity summary
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User activity statistics
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 issues:
+ *                   type: integer
+ *                 messages:
+ *                   type: integer
+ *                 votes:
+ *                   type: integer
+ *                 posts:
+ *                   type: integer
+ *       500:
+ *         description: Server error
+ */
 
 // My summary (citizen)
 router.get("/me", authenticate(), async (req, res) => {

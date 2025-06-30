@@ -68,7 +68,7 @@ const Navigation = ({ isOpen, onClose }) => {
 
   return (
     <aside
-      className={`fixed inset-y-0 left-0 w-64 bg-gray-800 text-white transform transition-transform duration-200 z-40 ${
+      className={`fixed inset-y-0 left-0 w-64 bg-gray-800 text-white transform transition-transform duration-200 z-40 overflow-y-auto ${
         isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
       } md:static md:block`}
     >

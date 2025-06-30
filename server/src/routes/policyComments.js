@@ -4,6 +4,53 @@ import PolicyComment from "../models/PolicyComment.js";
 
 const router = express.Router();
 
+/**
+ * @swagger
+ * tags:
+ *   name: PolicyComments
+ *   description: Policy document comments and discussions
+ */
+
+/**
+ * @swagger
+ * /api/{policyId}/comments:
+ *   get:
+ *     summary: List comments for a specific policy
+ *     tags: [PolicyComments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: policyId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Policy document ID
+ *     responses:
+ *       200:
+ *         description: Array of comments for the policy
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                   policyId:
+ *                     type: integer
+ *                   authorId:
+ *                     type: string
+ *                   content:
+ *                     type: string
+ *                   createdAt:
+ *                     type: string
+ *                     format: date-time
+ *       500:
+ *         description: Server error
+ */
+
 // List comments for a policy
 router.get("/:policyId/comments", authenticate(), async (req, res) => {
   try {
@@ -17,6 +64,41 @@ router.get("/:policyId/comments", authenticate(), async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+
+/**
+ * @swagger
+ * /api/{policyId}/comments:
+ *   post:
+ *     summary: Create a new comment on a policy
+ *     tags: [PolicyComments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: policyId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Policy document ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - content
+ *             properties:
+ *               content:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Comment successfully created
+ *       400:
+ *         description: Validation error
+ *       500:
+ *         description: Server error
+ */
 
 router.post("/:policyId/comments", authenticate(), async (req, res) => {
   try {

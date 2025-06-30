@@ -12,6 +12,8 @@ import pollsRoutes from "./routes/polls.js";
 import policyCommentsRoutes from "./routes/policyComments.js";
 import forumsRoutes from "./routes/forums.js";
 import analyticsRoutes from "./routes/analytics.js";
+import swaggerUi from "swagger-ui-express";
+import swaggerSpec from "./swagger.js";
 
 dotenv.config();
 
@@ -32,6 +34,10 @@ app.use("/api/polls", pollsRoutes);
 app.use("/api/policies", policyCommentsRoutes);
 app.use("/api/forums", forumsRoutes);
 app.use("/api/analytics", analyticsRoutes);
+
+// Swagger docs endpoints
+app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.get("/api/docs.json", (req, res) => res.json(swaggerSpec));
 
 // static serve uploads
 app.use("/uploads", express.static("uploads"));

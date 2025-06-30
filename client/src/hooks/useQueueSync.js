@@ -13,6 +13,6 @@ const useQueueSync = () => {
       }
     };
     register();
-  });
+  }, []);
 };
 export default useQueueSync; 

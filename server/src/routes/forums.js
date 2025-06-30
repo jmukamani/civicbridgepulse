@@ -6,6 +6,43 @@ import { logInteraction } from "../utils/logInteraction.js";
 
 const router = express.Router();
 
+/**
+ * @swagger
+ * tags:
+ *   name: Forums
+ *   description: Community discussion forums
+ */
+
+/**
+ * @swagger
+ * /api/forums/threads:
+ *   post:
+ *     summary: Create a new forum thread
+ *     tags: [Forums]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - title
+ *             properties:
+ *               title:
+ *                 type: string
+ *               category:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Thread successfully created
+ *       400:
+ *         description: Validation error
+ *       500:
+ *         description: Server error
+ */
+
 // Create thread
 router.post("/threads", authenticate(), async (req, res) => {
   try {
@@ -19,6 +56,39 @@ router.post("/threads", authenticate(), async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/forums/threads:
+ *   get:
+ *     summary: List all forum threads
+ *     tags: [Forums]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Array of forum threads
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                   title:
+ *                     type: string
+ *                   category:
+ *                     type: string
+ *                   createdBy:
+ *                     type: string
+ *                   createdAt:
+ *                     type: string
+ *                     format: date-time
+ *       500:
+ *         description: Server error
+ */
+
 // List threads
 router.get("/threads", authenticate(), async (req, res) => {
   try {
@@ -29,6 +99,30 @@ router.get("/threads", authenticate(), async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+
+/**
+ * @swagger
+ * /api/forums/threads/{id}:
+ *   get:
+ *     summary: Get specific thread with all posts
+ *     tags: [Forums]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Thread ID
+ *     responses:
+ *       200:
+ *         description: Thread with posts
+ *       404:
+ *         description: Thread not found
+ *       500:
+ *         description: Server error
+ */
 
 // Get thread with posts
 router.get("/threads/:id", authenticate(), async (req, res) => {
@@ -44,6 +138,41 @@ router.get("/threads/:id", authenticate(), async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+
+/**
+ * @swagger
+ * /api/forums/threads/{id}/posts:
+ *   post:
+ *     summary: Create a new post in a thread
+ *     tags: [Forums]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Thread ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - content
+ *             properties:
+ *               content:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Post successfully created
+ *       400:
+ *         description: Validation error
+ *       500:
+ *         description: Server error
+ */
 
 // Create post in thread
 router.post("/threads/:id/posts", authenticate(), async (req, res) => {

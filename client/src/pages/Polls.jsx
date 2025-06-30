@@ -96,9 +96,15 @@ const PollCard = ({ poll, onVote }) => {
             <div key={idx} className="flex items-center gap-2">
               <div className="w-32">{opt}</div>
               <div className="flex-1 bg-gray-200 h-2 rounded">
-                <div className="bg-indigo-600 h-2 rounded" style={{width:`${(poll.votesCount[idx]||0)/(poll.totalVotes||1)*100}%`}} />
+                {(() => {
+                  const count = poll.votesCount?.[idx] ?? 0;
+                  const pct = (count / (poll.totalVotes || 1)) * 100;
+                  return (
+                    <div className="bg-indigo-600 h-2 rounded" style={{ width: `${pct}%` }} />
+                  );
+                })()}
               </div>
-              <span className="text-xs">{poll.votesCount[idx]||0}</span>
+              <span className="text-xs">{poll.votesCount?.[idx] ?? 0}</span>
             </div>
           ))}
           <p className="text-xs text-green-700">{voted?"You voted":"Results"}</p>
@@ -172,7 +178,12 @@ const Polls = () => {
     }
   };
 
-  const onCreated = (poll) => setPolls((prev) => [poll, ...prev]);
+  const onCreated = (poll) => {
+    poll.votes = [];
+    poll.votesCount = Array(poll.options.length).fill(0);
+    poll.totalVotes = 0;
+    setPolls((prev) => [poll, ...prev]);
+  };
 
   return (
     <div className="space-y-4">
