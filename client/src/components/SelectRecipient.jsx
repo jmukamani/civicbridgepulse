@@ -35,7 +35,9 @@ const SelectRecipient = ({ onSelect, onClose }) => {
               className="w-full text-left p-2 border rounded hover:bg-gray-100"
             >
               {u.name} ({u.role})
-              <span className="block text-xs text-gray-500">{u.email}</span>
+              {u.isPublic !== false && (
+                <span className="block text-xs text-gray-500">{u.email}</span>
+              )}
             </button>
           ))}
           {results.length === 0 && <p className="text-sm text-gray-500">No users</p>}

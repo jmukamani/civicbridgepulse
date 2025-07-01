@@ -60,6 +60,12 @@ router.get("/", authenticate(), async (req, res) => {
     const { role, q } = req.query;
     const where = {};
     if (role) where.role = role;
+
+    // If a citizen is requesting representative list, limit to their county
+    if (req.user.role === "citizen" && role === "representative" && req.user.county) {
+      where.county = req.user.county;
+    }
+
     if (q) where[Op.or] = [
       { name: { [Op.iLike]: `%${q}%` } },
       { email: { [Op.iLike]: `%${q}%` } },

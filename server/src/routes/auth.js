@@ -43,6 +43,7 @@ const generateToken = (user) => {
  *               - name
  *               - email
  *               - password
+ *               - county
  *             properties:
  *               name:
  *                 type: string
@@ -55,6 +56,8 @@ const generateToken = (user) => {
  *                 type: string
  *                 enum: [citizen, representative, admin]
  *                 default: citizen
+ *               county:
+ *                 type: string
  *     responses:
  *       201:
  *         description: Registration successful, verification email sent
@@ -67,7 +70,7 @@ const generateToken = (user) => {
 // Registration
 router.post("/register", async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, county } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ message: "All fields are required" });
@@ -79,7 +82,7 @@ router.post("/register", async (req, res) => {
     }
 
     const hashed = await bcrypt.hash(password, 10);
-    const user = await User.create({ name, email, password: hashed, role });
+    const user = await User.create({ name, email, password: hashed, role, county });
 
     // Send verification email
     const token = generateToken(user);

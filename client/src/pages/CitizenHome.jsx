@@ -87,14 +87,6 @@ const CitizenHome = () => {
         <p className="text-5xl font-bold text-green-600">{civicScore}</p>
         <p className="text-sm text-gray-500">Engagement level indicator</p>
       </div>
-
-      {/* Map placeholder */}
-      <div className="bg-white p-4 rounded shadow">
-        <h3 className="font-semibold mb-2">Local Issues Map</h3>
-        <div className="h-64 flex items-center justify-center text-gray-400 italic">
-          Map visualization coming soon
-        </div>
-      </div>
     </div>
   );
 };

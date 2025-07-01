@@ -1,12 +1,10 @@
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
+import gTranslate from "@vitalets/google-translate-api";
 
-// @vitalets/google-translate-api provides a default export which is the translate
-// function when used in ESM. Import it directly to avoid situations where the
-// default gets nested under a `default` property, which led to `translate is
-// not a function` runtime errors in certain bundling scenarios.
-import translate from "@vitalets/google-translate-api";
+
+const translate = typeof gTranslate === "function" ? gTranslate : gTranslate.default;
 
 const CACHE_FILE = path.join("cache", "translations.json");
 fs.mkdirSync(path.dirname(CACHE_FILE), { recursive: true });

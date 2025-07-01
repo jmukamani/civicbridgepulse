@@ -18,6 +18,8 @@ export const resources = {
       other: "Other",
       search: "Search",
       filter: "Filter",
+      public_profile: "Make my profile public (visible to others)",
+      county: "County",
     },
   },
   sw: {
@@ -36,6 +38,8 @@ export const resources = {
       other: "Nyingine",
       search: "Tafuta",
       filter: "Chuja",
+      public_profile: "Onyesha wasifu wangu kwa umma (uonwe na wengine)",
+      county: "Kaunti",
     },
   },
 };

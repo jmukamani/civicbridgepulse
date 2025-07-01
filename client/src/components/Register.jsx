@@ -4,7 +4,7 @@ import axios from "axios";
 import { useTranslation } from "react-i18next";
 
 const Register = () => {
-  const [form, setForm] = useState({ name: "", email: "", password: "", role: "citizen" });
+  const [form, setForm] = useState({ name: "", email: "", password: "", role: "citizen", county: "" });
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const navigate = useNavigate();
@@ -63,6 +63,16 @@ const Register = () => {
             name="password"
             type="password"
             value={form.password}
+            onChange={handleChange}
+            className="w-full border px-3 py-2 rounded"
+            required
+          />
+        </div>
+        <div className="mb-4">
+          <label className="block mb-1">{t("county")}</label>
+          <input
+            name="county"
+            value={form.county}
             onChange={handleChange}
             className="w-full border px-3 py-2 rounded"
             required

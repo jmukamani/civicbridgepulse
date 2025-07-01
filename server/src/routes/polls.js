@@ -59,7 +59,7 @@ router.post("/", authenticate("representative"), async (req, res) => {
     if (!question || !Array.isArray(options) || options.length < 2) {
       return res.status(400).json({ message: "Invalid poll data" });
     }
-    const poll = await Poll.create({ question, options, multiple, createdBy: req.user.id });
+    const poll = await Poll.create({ question, options, multiple, createdBy: req.user.id, county: req.user.county });
     res.status(201).json(poll);
   } catch (err) {
     console.error(err);
@@ -107,7 +107,12 @@ router.post("/", authenticate("representative"), async (req, res) => {
 // List polls (all)
 router.get("/", authenticate(), async (req, res) => {
   try {
-    const polls = await Poll.findAll({ order: [["createdAt", "DESC"]] });
+    const where = {};
+    if (req.user.role === "citizen" || req.user.role === "representative") {
+      if (!req.user.county) return res.status(400).json({ message: "Set county in profile first" });
+      where.county = req.user.county;
+    }
+    const polls = await Poll.findAll({ where, order: [["createdAt", "DESC"]] });
     res.json(polls);
   } catch (err) {
     console.error(err);

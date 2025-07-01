@@ -4,11 +4,13 @@ import { getToken, getUser } from "../utils/auth.js";
 import { Link, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import BudgetChart from "../components/BudgetChart.jsx";
 import { toast } from "react-toastify";
+import { formatDistanceToNow } from "date-fns";
 
 const PolicyList = () => {
   const [docs, setDocs] = useState([]);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
+  const user = getUser();
 
   useEffect(() => {
     const fetch = async () => {
@@ -21,39 +23,100 @@ const PolicyList = () => {
     fetch();
   }, [search, category]);
 
+  // Helper to color tags
+  const tagClasses = (type, val) => {
+    const map = {
+      category: {
+        infrastructure: "bg-green-100 text-green-800",
+        education: "bg-purple-100 text-purple-800",
+        energy: "bg-amber-100 text-amber-800",
+        water: "bg-blue-100 text-blue-800",
+        environment: "bg-green-100 text-green-800",
+        budget: "bg-teal-100 text-teal-800",
+        development: "bg-indigo-100 text-indigo-800",
+        bylaw: "bg-pink-100 text-pink-800",
+        other: "bg-gray-100 text-gray-800",
+      },
+      status: {
+        draft: "bg-yellow-100 text-yellow-800",
+        review: "bg-amber-100 text-amber-800",
+        published: "bg-green-100 text-green-800",
+        approved: "bg-green-100 text-green-800",
+        'in progress': "bg-blue-100 text-blue-800",
+        delayed: "bg-red-100 text-red-800",
+        'under review': "bg-amber-100 text-amber-800",
+      },
+    };
+    return map[type]?.[val] || "bg-gray-100 text-gray-800";
+  };
+
   return (
     <div>
-      <h2 className="text-2xl font-bold mb-4">Policy Documents</h2>
-      <div className="flex gap-2 mb-4">
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search policies"
-          className="border px-3 py-2 rounded flex-1"
-        />
-        <select value={category} onChange={(e) => setCategory(e.target.value)} className="border px-2 py-2">
-          <option value="">All</option>
-          <option value="budget">Budget</option>
-          <option value="development">Development Plan</option>
-          <option value="bylaw">Bylaw</option>
-        </select>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-2xl font-bold">Policies</h2>
+        <div className="flex gap-2">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search projects"
+            className="border px-3 py-2 rounded flex-1"
+          />
+          <select value={category} onChange={(e) => setCategory(e.target.value)} className="border px-2 py-2">
+            <option value="">All</option>
+            <option value="infrastructure">Infrastructure</option>
+            <option value="education">Education</option>
+            <option value="energy">Energy</option>
+            <option value="water">Water</option>
+            <option value="environment">Environment</option>
+            <option value="budget">Budget</option>
+            <option value="development">Development Plan</option>
+            <option value="bylaw">Bylaw</option>
+          </select>
+        </div>
       </div>
-      <ul className="space-y-2">
-        {docs.map((d) => (
-          <li key={d.id}>
-            <Link
-              to={`view/${d.id}`}
-              className="block p-3 border rounded hover:bg-gray-100"
-            >
-              <div className="font-medium">{d.title}</div>
-              <div className="text-xs text-gray-500">
-                {d.category} · {new Date(d.createdAt).toLocaleDateString()}
-              </div>
-            </Link>
-          </li>
-        ))}
-        {docs.length === 0 && <p className="text-gray-500">No documents found</p>}
-      </ul>
+      {/* Table header */}
+      <div className="grid grid-cols-12 text-xs font-semibold text-gray-500 px-4 py-2 border-b">
+        <div className="col-span-4 md:col-span-4">POLICY</div>
+        <div className="col-span-2">CATEGORY</div>
+        <div className="col-span-2">STATUS</div>
+        <div className="col-span-2">LAST UPDATE</div>
+        {user?.role === 'citizen' && <div className="col-span-2 text-center">ACTION</div>}
+      </div>
+      {docs.map((d) => (
+        <div
+          key={d.id}
+          className="grid grid-cols-12 items-center px-4 py-3 border-b hover:bg-gray-50 text-sm"
+        >
+          {/* Icon + title */}
+          <Link to={`view/${d.id}`} className="col-span-4 md:col-span-4 flex items-start gap-4">
+            <div className="h-10 w-10 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 text-xl font-bold">
+              {d.title.charAt(0)}
+            </div>
+            <div>
+              <p className="font-medium text-gray-900 leading-none">{d.title}</p>
+              <p className="text-xs text-gray-500">{d.subtitle || d.department || d.category}</p>
+            </div>
+          </Link>
+          {/* Category tag */}
+          <div className="col-span-2">
+            <span className={`text-xs px-2 py-1 rounded-full ${tagClasses('category', d.category)}`}>{d.category}</span>
+          </div>
+          {/* Status tag */}
+          <div className="col-span-2">
+            <span className={`text-xs px-2 py-1 rounded-full capitalize ${tagClasses('status', d.status)}`}>{d.status?.replace('_', ' ')}</span>
+          </div>
+          {/* Last update */}
+          <div className="col-span-2 text-gray-500 text-xs">
+            {formatDistanceToNow(new Date(d.updatedAt), { addSuffix: true })}
+          </div>
+          {user?.role === 'citizen' && (
+            <div className="col-span-2 flex justify-center">
+              <Link to={`view/${d.id}#comments`} className="text-indigo-600 text-xs hover:underline">Add Feedback</Link>
+            </div>
+          )}
+        </div>
+      ))}
+      {docs.length === 0 && <p className="text-gray-500 mt-4 text-sm">No projects found</p>}
     </div>
   );
 };

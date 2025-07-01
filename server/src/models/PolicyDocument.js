@@ -43,6 +43,10 @@ PolicyDocument.init(
       type: DataTypes.UUID,
       allowNull: false,
     },
+    county: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
   },
   {
     sequelize,

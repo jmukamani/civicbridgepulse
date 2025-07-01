@@ -103,6 +103,7 @@ router.post("/upload", authenticate(["representative", "admin"]), upload.single(
       budget: budget ? JSON.parse(budget) : null,
       filePath: req.file.path.replace(/\\/g, "/"),
       uploadedBy: req.user.id,
+      county: req.user.county || null,
     });
     res.status(201).json(doc);
   } catch (err) {
@@ -159,10 +160,28 @@ router.post("/upload", authenticate(["representative", "admin"]), upload.single(
 router.get("/", authenticate(), async (req, res) => {
   try {
     const { q, category } = req.query;
-    const where = { status: "published" };
-    if (req.user.role === "representative" || req.user.role === "admin") delete where.status;
+    const where = {};
+
+    // 1) Status filter – only citizens are limited to published docs
+    if (req.user.role === "citizen") {
+      where.status = "published";
+    }
+
+    // 2) County / ownership scoping
+    const userCounty = req.user.county;
+    if (req.user.role === "citizen") {
+      // Citizens must have county set; otherwise return error
+      if (!userCounty) return res.status(400).json({ message: "Set county in profile first" });
+      where.county = userCounty;
+    } else if (req.user.role === "representative") {
+      if (!userCounty) return res.status(400).json({ message: "Set county in profile first" });
+      where.county = userCounty;
+    }
+
+    // 3) Optional query filters
     if (category) where.category = category;
     if (q) where.title = { [Op.iLike]: `%${q}%` };
+
     const docs = await PolicyDocument.findAll({ where, order: [["createdAt", "DESC"]] });
     res.json(docs);
   } catch (err) {
