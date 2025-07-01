@@ -225,4 +225,20 @@ router.post("/:id/vote", authenticate("citizen"), async (req, res) => {
   }
 });
 
+// Delete poll (representative)
+router.delete("/:id", authenticate("representative"), async (req, res) => {
+  try {
+    const id = req.params.id;
+    const poll = await Poll.findByPk(id);
+    if (!poll) return res.status(404).json({ message: "Poll not found" });
+    // remove associated votes first
+    await PollVote.destroy({ where: { pollId: id } });
+    await poll.destroy();
+    res.json({ message: "Poll deleted" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 export default router; 

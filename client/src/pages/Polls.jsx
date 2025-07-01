@@ -87,6 +87,19 @@ const PollCard = ({ poll, onVote }) => {
     }
   };
 
+  const deletePoll = async () => {
+    if (!window.confirm("Delete this poll?")) return;
+    try {
+      await fetch(`${API_BASE}/api/polls/${poll.id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      poll._onDeleted && poll._onDeleted();
+    } catch (err) {
+      toast.error("Could not delete poll");
+    }
+  };
+
   return (
     <div className="border rounded p-4 space-y-2">
       <h3 className="font-semibold">{poll.question}</h3>
@@ -133,6 +146,9 @@ const PollCard = ({ poll, onVote }) => {
       >
         Vote
       </button>)}
+      {user.role==='representative' && (
+        <button onClick={deletePoll} className="text-red-600 text-xs ml-2">Delete</button>
+      )}
     </div>
   );
 };
@@ -159,7 +175,6 @@ const Polls = () => {
 
   useEffect(() => {
     fetchPolls();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const vote = async (id, selected) => {
@@ -182,6 +197,7 @@ const Polls = () => {
     poll.votes = [];
     poll.votesCount = Array(poll.options.length).fill(0);
     poll.totalVotes = 0;
+    poll._onDeleted = () => setPolls(prev=>prev.filter(p=>p.id!==poll.id));
     setPolls((prev) => [poll, ...prev]);
   };
 
@@ -190,9 +206,10 @@ const Polls = () => {
       {user.role === "representative" && <PollForm onCreated={onCreated} />}
       <h2 className="text-lg font-bold">Active Polls</h2>
       <div className="space-y-4">
-        {polls.map((poll) => (
-          <PollCard key={poll.id} poll={poll} onVote={vote} />
-        ))}
+        {polls.map((poll) => {
+          poll._onDeleted = () => setPolls(prev=>prev.filter(p=>p.id!==poll.id));
+          return <PollCard key={poll.id} poll={poll} onVote={vote} />;
+        })}
         {polls.length === 0 && <p>No polls available</p>}
       </div>
     </div>

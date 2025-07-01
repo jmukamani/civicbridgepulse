@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { getToken } from "../utils/auth.js";
+import { toast } from "react-toastify";
 
 const PolicyManagement = () => {
   const [title, setTitle] = useState("");
@@ -42,6 +43,19 @@ const PolicyManagement = () => {
       fetchDocs();
     } catch (err) {
       setError(err.response?.data?.message || "Upload failed");
+    }
+  };
+
+  const del = async (id) => {
+    if (!window.confirm("Delete this document?")) return;
+    try {
+      await axios.delete(`http://localhost:5000/api/policies/${id}`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      toast.success("Document deleted");
+      setDocs((prev) => prev.filter((d) => d.id !== id));
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Delete failed");
     }
   };
 
@@ -88,8 +102,9 @@ const PolicyManagement = () => {
       <h3 className="font-semibold mb-2">Existing Documents</h3>
       <ul className="space-y-2">
         {docs.map((d) => (
-          <li key={d.id} className="p-3 border rounded">
-            {d.title} - {d.category} - {d.status}
+          <li key={d.id} className="p-3 border rounded flex justify-between items-center">
+            <span>{d.title} - {d.category} - {d.status}</span>
+            <button onClick={()=>del(d.id)} className="text-red-600 text-sm">Delete</button>
           </li>
         ))}
       </ul>

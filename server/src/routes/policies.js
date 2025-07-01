@@ -247,4 +247,26 @@ router.get("/:id/file", authenticate(), async (req, res) => {
   res.sendFile(path.resolve(doc.filePath));
 });
 
+// Delete policy document (representative/admin)
+router.delete("/:id", authenticate(["representative", "admin"]), async (req, res) => {
+  try {
+    const id = req.params.id;
+    const doc = await PolicyDocument.findByPk(id);
+    if (!doc) return res.status(404).json({ message: "Policy not found" });
+    // remove file from disk if exists
+    if (doc.filePath && fs.existsSync(doc.filePath)) {
+      try {
+        fs.unlinkSync(doc.filePath);
+      } catch (e) {
+        console.error("File delete error", e);
+      }
+    }
+    await doc.destroy();
+    res.json({ message: "Policy deleted" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 export default router; 
