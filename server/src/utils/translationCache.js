@@ -7,7 +7,14 @@ let translateAny = gTranslate;
 while (translateAny && typeof translateAny !== "function" && translateAny.default) {
   translateAny = translateAny.default;
 }
-const translate = translateAny;
+let translate = translateAny;
+if (typeof translate !== "function") {
+  // dynamic import fallback (CommonJS default export)
+  try {
+    const m = await import("@vitalets/google-translate-api");
+    translate = m.default || m.translate || translate;
+  } catch {}
+}
 
 const CACHE_FILE = path.join("cache", "translations.json");
 fs.mkdirSync(path.dirname(CACHE_FILE), { recursive: true });
