@@ -93,11 +93,9 @@ router.get("/", authenticate(), async (req, res) => {
     const where = {};
     const userCounty = req.user.county;
     if (req.user.role === "citizen") {
-      if (!userCounty) return res.status(400).json({ message: "Set county in profile first" });
-      where.county = userCounty;
+      if (userCounty) where.county = userCounty;
     } else if (req.user.role === "representative") {
-      if (!userCounty) return res.status(400).json({ message: "Set county in profile first" });
-      where.county = userCounty;
+      if (userCounty) where.county = userCounty;
     }
     const issues = await Issue.findAll({ where, order: [["createdAt", "DESC"]] });
     res.json(issues);

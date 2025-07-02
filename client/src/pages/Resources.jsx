@@ -1,7 +1,7 @@
 const resources = [
-  { title: "Kenya Constitution (2010)", url: "https://www.constitutionnet.org/sites/default/files/kenya_constitution_2010.pdf" },
-  { title: "Citizen Participation Handbook", url: "https://example.com/handbook.pdf" },
-  { title: "Budget Process Explained (YouTube)", url: "https://www.youtube.com/watch?v=dummy" },
+  { title: "Kenya Constitution (2010)", url: "https://www.constituteproject.org/constitution/Kenya_2010" },
+  { title: "Citizen Participation Handbook", url: "https://uraia.or.ke/wp-content/uploads/2023/12/Citizen-Handbook.pdf" },
+  { title: "Budget Process Explained (YouTube)", url: "https://www.youtube.com/watch?v=vx_wfGf6IIM" },
 ];
 
 const Resources = () => (

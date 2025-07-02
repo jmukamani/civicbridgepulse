@@ -25,6 +25,14 @@ const useSocket = () => {
       }
     });
 
+    socket.on("policy_comment", ({ policyId }) => {
+      notifyInfo("New feedback on one of your policies");
+    });
+
+    socket.on("event_new", () => {
+      notifyInfo("New civic event scheduled");
+    });
+
     return () => {
       socket.disconnect();
     };

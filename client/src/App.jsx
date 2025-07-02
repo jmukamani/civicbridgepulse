@@ -23,9 +23,9 @@ const App = () => {
           CivicBridgePulse Kenya
         </Link>
         <div className="flex items-center gap-4">
-          <div>
+        <div>
             <button onClick={() => changeLanguage("en")} className="mr-2">EN</button>
-            <button onClick={() => changeLanguage("sw")}>SW</button>
+          <button onClick={() => changeLanguage("sw")}>SW</button>
           </div>
           {onLanding && (
             <>

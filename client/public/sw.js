@@ -55,6 +55,8 @@ async function handleSync(){
         await fetch('/api/issues', {method:'POST', headers:{'Content-Type':'application/json', Authorization:`Bearer ${action.token}`}, body:JSON.stringify(action.payload)});
       } else if(action.type==='message'){
         await fetch('/api/messages/send',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${action.token}`},body:JSON.stringify(action.payload)});
+      } else if(action.type==='event'){
+        await fetch('/api/events',{method:'POST',headers:{'Content-Type':'application/json', Authorization:`Bearer ${action.token}`},body:JSON.stringify(action.payload)});
       }
       await removeQueued(action.id);
     }catch(err){console.error('sync error',err);}

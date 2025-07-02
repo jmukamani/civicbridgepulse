@@ -17,6 +17,7 @@ const citizenLinks = [
   { to: "forums", label: "Forums" },
   { to: "resources", label: "Resources" },
   { to: "my-analytics", label: "My Analytics" },
+  { to: "events", label: "Events" },
 ];
 
 const representativeLinks = [
@@ -27,6 +28,7 @@ const representativeLinks = [
   { to: "forums", label: "Forums" },
   { to: "resources", label: "Resources" },
   { to: "analytics", label: "Analytics" },
+  { to: "events", label: "Events" },
   { to: "settings", label: "Settings" },
   { to: "performance", label: "Performance" },
 ];

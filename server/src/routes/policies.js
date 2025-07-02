@@ -170,12 +170,9 @@ router.get("/", authenticate(), async (req, res) => {
     // 2) County / ownership scoping
     const userCounty = req.user.county;
     if (req.user.role === "citizen") {
-      // Citizens must have county set; otherwise return error
-      if (!userCounty) return res.status(400).json({ message: "Set county in profile first" });
-      where.county = userCounty;
+      if (userCounty) where.county = userCounty;
     } else if (req.user.role === "representative") {
-      if (!userCounty) return res.status(400).json({ message: "Set county in profile first" });
-      where.county = userCounty;
+      if (userCounty) where.county = userCounty;
     }
 
     // 3) Optional query filters

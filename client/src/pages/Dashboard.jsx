@@ -18,6 +18,8 @@ import Forums from "./Forums.jsx";
 import Resources from "./Resources.jsx";
 import CitizenAnalytics from "./CitizenAnalytics.jsx";
 import RepPerformance from "./RepPerformance.jsx";
+import PolicyComments from "./PolicyComments.jsx";
+import EventManagement from "./EventManagement.jsx";
 
 const Overview = () => {
   const user = getUser();
@@ -40,6 +42,7 @@ const Dashboard = () => {
         <Route path="messages/:userId" element={<Messaging />} />
         <Route path="policies/*" element={<Policies />} />
         <Route path="policy-management/*" element={<PolicyManagement />} />
+        <Route path="policy-management/:id" element={<PolicyComments />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="issues" element={<Issues />} />
         <Route path="polls" element={<Polls />} />
@@ -47,6 +50,7 @@ const Dashboard = () => {
         <Route path="resources" element={<Resources />} />
         <Route path="my-analytics" element={<CitizenAnalytics />} />
         <Route path="performance" element={<RepPerformance />} />
+        <Route path="events" element={<EventManagement />} />
         {/* more nested routes */}
       </Route>
     </Routes>

@@ -1,6 +1,7 @@
 import express from "express";
 import { authenticate } from "../middleware/auth.js";
 import PolicyComment from "../models/PolicyComment.js";
+import PolicyDocument from "../models/PolicyDocument.js";
 
 const router = express.Router();
 
@@ -109,6 +110,16 @@ router.post("/:policyId/comments", authenticate(), async (req, res) => {
       authorId: req.user.id,
       content,
     });
+
+    // Notify policy owner via Socket.io
+    try {
+      const policy = await PolicyDocument.findByPk(req.params.policyId);
+      if (policy) {
+        const io = req.app.get("io");
+        io.to(policy.uploadedBy).emit("policy_comment", { policyId: policy.id });
+      }
+    } catch {}
+
     res.status(201).json(comment);
   } catch (err) {
     console.error(err);

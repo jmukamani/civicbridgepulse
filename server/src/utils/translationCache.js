@@ -3,8 +3,11 @@ import path from "path";
 import crypto from "crypto";
 import gTranslate from "@vitalets/google-translate-api";
 
-
-const translate = typeof gTranslate === "function" ? gTranslate : gTranslate.default;
+let translateAny = gTranslate;
+while (translateAny && typeof translateAny !== "function" && translateAny.default) {
+  translateAny = translateAny.default;
+}
+const translate = translateAny;
 
 const CACHE_FILE = path.join("cache", "translations.json");
 fs.mkdirSync(path.dirname(CACHE_FILE), { recursive: true });

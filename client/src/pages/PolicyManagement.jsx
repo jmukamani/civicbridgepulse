@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { getToken } from "../utils/auth.js";
 import { toast } from "react-toastify";
+import { Link } from "react-router-dom";
 
 const PolicyManagement = () => {
   const [title, setTitle] = useState("");
@@ -105,6 +106,7 @@ const PolicyManagement = () => {
           <li key={d.id} className="p-3 border rounded flex justify-between items-center">
             <span>{d.title} - {d.category} - {d.status}</span>
             <button onClick={()=>del(d.id)} className="text-red-600 text-sm">Delete</button>
+            <Link to={`/dashboard/policy-management/${d.id}`} className="text-indigo-600 text-xs hover:underline">Comments</Link>
           </li>
         ))}
       </ul>

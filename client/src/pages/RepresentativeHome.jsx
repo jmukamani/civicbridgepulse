@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
 import { getUser, getToken } from "../utils/auth.js";
+import useSocket from "../hooks/useSocket.js";
 
 const API_BASE = "http://localhost:5000";
 
@@ -24,21 +25,25 @@ const RepresentativeHome = () => {
   const [polls, setPolls] = useState([]);
   const [threads, setThreads] = useState([]);
   const [policies, setPolicies] = useState([]);
+  const [events, setEvents] = useState([]);
+  const socketRef = useSocket();
 
   useEffect(() => {
     const load = async () => {
       try {
         const tokenHeader = { headers: { Authorization: `Bearer ${getToken()}` } };
-        const [issRes, pollRes, threadRes, policyRes] = await Promise.all([
+        const [issRes, pollRes, threadRes, policyRes, eventsRes] = await Promise.all([
           axios.get(`${API_BASE}/api/issues`, tokenHeader),
           axios.get(`${API_BASE}/api/polls`, tokenHeader),
           axios.get(`${API_BASE}/api/forums/threads`, tokenHeader),
           axios.get(`${API_BASE}/api/policies`, tokenHeader),
+          axios.get(`${API_BASE}/api/events`, tokenHeader),
         ]);
 
         setIssues(issRes.data);
         setThreads(threadRes.data);
         setPolicies(policyRes.data);
+        setEvents(eventsRes.data);
 
         // Poll details with votes
         const dets = await Promise.all(
@@ -53,6 +58,12 @@ const RepresentativeHome = () => {
       }
     };
     load();
+
+    const socket = socketRef.current;
+    if (socket) {
+      socket.on("policy_comment", load);
+      return () => socket.off("policy_comment", load);
+    }
   }, []);
 
   // Compute simple budget total for display (sum of numeric values in budget JSON)
@@ -72,7 +83,7 @@ const RepresentativeHome = () => {
       <div className="bg-white p-6 rounded-lg shadow flex items-center justify-between">
         <div>
           <h2 className="text-2xl md:text-3xl font-bold mb-1">
-            Welcome, Hon. {user?.name || "Representative"}
+            Welcome, Hon. {user?.name?.split(" ")[0] || "Representative"}
           </h2>
           <p className="text-gray-600">
             Manage civic activities in {user?.ward || "your Ward"}, {user?.county || "your County"}
@@ -102,9 +113,9 @@ const RepresentativeHome = () => {
         />
         <StatCard
           title="Scheduled Events"
-          value={0}
+          value={events.length}
           icon={<span>📅</span>}
-          note="coming soon"
+          note={events.length ? "next: "+ new Date(events[0].date).toLocaleDateString() : "none"}
         />
         <StatCard
           title="Budget Allocation"
@@ -167,14 +178,7 @@ const RepresentativeHome = () => {
                   <Link to="policy-management" className="text-indigo-600 text-xs hover:underline">
                     Edit
                   </Link>
-                  <a
-                    href={`http://localhost:5000/api/policies/${p.id}/file?token=${getToken()}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-indigo-600 text-xs hover:underline"
-                  >
-                    View
-                  </a>
+                  <Link to={`/dashboard/policy-management/${p.id}`} className="text-indigo-600 text-xs hover:underline">Comments</Link>
                 </td>
               </tr>
             ))}

@@ -10,6 +10,7 @@ const CitizenHome = () => {
   const [issues, setIssues] = useState([]);
   const [polls, setPolls] = useState([]);
   const [threads, setThreads] = useState([]);
+  const [events, setEvents] = useState([]);
 
   useEffect(() => {
     const load = async () => {
@@ -32,6 +33,10 @@ const CitizenHome = () => {
         const th = await axios.get(`${API_BASE}/api/forums/threads`, tokenHeader);
         const myThreads = th.data.filter((t) => t.createdBy === user.id);
         setThreads(myThreads);
+
+        // Events
+        const ev = await axios.get(`${API_BASE}/api/events`, tokenHeader);
+        setEvents(ev.data);
       } catch (err) {
         console.error(err);
       }
@@ -79,6 +84,17 @@ const CitizenHome = () => {
           <h3 className="font-semibold mb-2">Discussions Joined</h3>
           <p className="text-3xl font-bold text-teal-600">{threads.length}</p>
         </div>
+      </div>
+
+      {/* Upcoming Events */}
+      <div className="bg-white p-4 rounded shadow">
+        <h3 className="font-semibold mb-2">Upcoming Events</h3>
+        <ul className="space-y-1 text-sm max-h-40 overflow-auto">
+          {events.map((ev) => (
+            <li key={ev.id}>{new Date(ev.date).toLocaleDateString()} – {ev.title}</li>
+          ))}
+          {events.length === 0 && <p>No events scheduled.</p>}
+        </ul>
       </div>
 
       {/* Civic Score */}
