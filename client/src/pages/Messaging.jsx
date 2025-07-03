@@ -5,6 +5,8 @@ import useSocket from "../hooks/useSocket.js";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import RatingButton from "../components/RatingButton.jsx";
 import { notifySuccess, notifyError } from "../utils/notifications.js";
+import useOnlineStatus from "../hooks/useOnlineStatus.js";
+import { queueAction, generateId } from "../utils/db.js";
 
 const Messaging = () => {
   const { userId: otherId } = useParams();
@@ -20,6 +22,7 @@ const Messaging = () => {
   const user = getUser();
   const bottomRef = useRef(null);
   const navigate = useNavigate();
+  const online = useOnlineStatus();
 
   useEffect(() => {
     if (!otherId) return;
@@ -74,18 +77,29 @@ const Messaging = () => {
 
   const sendMessage = async () => {
     if (!content) return;
-    try {
-      const res = await axios.post(
-        "http://localhost:5000/api/messages/send",
-        { recipientId: otherId, content, topic, category: composeCategory },
-        { headers: { Authorization: `Bearer ${getToken()}` } }
-      );
-      setMessages((prev) => [...prev, res.data]);
-      setContent("");
-      notifySuccess("Message sent");
-    } catch (err) {
-      notifyError(err.response?.data?.message || "Send failed");
+    const msgPayload = { recipientId: otherId, content, topic, category: composeCategory };
+
+    if (online) {
+      try {
+        const res = await axios.post("http://localhost:5000/api/messages/send", msgPayload, {
+          headers: { Authorization: `Bearer ${getToken()}` },
+        });
+        setMessages((prev) => [...prev, res.data]);
+        notifySuccess("Message sent");
+      } catch (err) {
+        notifyError(err.response?.data?.message || "Send failed");
+      }
+    } else {
+      // queue
+      await queueAction({ id: generateId(), type: "message", payload: msgPayload, token: getToken() });
+      // optimistic UI
+      setMessages((prev) => [
+        ...prev,
+        { id: generateId(), ...msgPayload, senderId: getUser().id, recipientId: otherId, createdAt: new Date().toISOString(), read: false },
+      ]);
+      notifySuccess("Message queued (offline)");
     }
+    setContent("");
   };
 
   const filteredMessages = messages.filter(

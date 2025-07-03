@@ -3,6 +3,9 @@ import { authenticate } from "../middleware/auth.js";
 import Poll from "../models/Poll.js";
 import PollVote from "../models/PollVote.js";
 import { logInteraction } from "../utils/logInteraction.js";
+import ForumThread from "../models/ForumThread.js";
+import ForumPost from "../models/ForumPost.js";
+import { Op } from "sequelize";
 
 const router = express.Router();
 
@@ -55,11 +58,22 @@ const router = express.Router();
 // Create poll (representative)
 router.post("/", authenticate("representative"), async (req, res) => {
   try {
-    const { question, options, multiple = false } = req.body;
+    const { question, options, multiple = false, opensAt, closesAt } = req.body;
     if (!question || !Array.isArray(options) || options.length < 2) {
       return res.status(400).json({ message: "Invalid poll data" });
     }
-    const poll = await Poll.create({ question, options, multiple, createdBy: req.user.id, county: req.user.county });
+    let status = "open";
+    if (opensAt && new Date(opensAt) > new Date()) status = "scheduled";
+    const poll = await Poll.create({
+      question,
+      options,
+      multiple,
+      opensAt: opensAt ? new Date(opensAt) : null,
+      closesAt: closesAt ? new Date(closesAt) : null,
+      status,
+      createdBy: req.user.id,
+      county: req.user.county,
+    });
     res.status(201).json(poll);
   } catch (err) {
     console.error(err);
@@ -108,8 +122,15 @@ router.post("/", authenticate("representative"), async (req, res) => {
 router.get("/", authenticate(), async (req, res) => {
   try {
     const where = {};
-    if (req.user.role === "citizen" || req.user.role === "representative") {
-      if (req.user.county) where.county = req.user.county;
+    if (req.user.role !== "admin" && req.user.county) where.county = req.user.county;
+
+    // Citizens only see open polls within schedule
+    if (req.user.role === "citizen") {
+      where.status = "open";
+      where[Op.and] = [
+        { [Op.or]: [{ opensAt: null }, { opensAt: { [Op.lte]: new Date() } }] },
+        { [Op.or]: [{ closesAt: null }, { closesAt: { [Op.gte]: new Date() } }] },
+      ];
     }
     const polls = await Poll.findAll({ where, order: [["createdAt", "DESC"]] });
     res.json(polls);
@@ -206,7 +227,10 @@ router.post("/:id/vote", authenticate("citizen"), async (req, res) => {
     }
     const poll = await Poll.findByPk(req.params.id);
     if (!poll) return res.status(404).json({ message: "Poll not found" });
-    if (poll.status !== "open") return res.status(400).json({ message: "Poll closed" });
+    const now = new Date();
+    if (poll.status !== "open" || (poll.opensAt && poll.opensAt > now) || (poll.closesAt && poll.closesAt < now)) {
+      return res.status(400).json({ message: "Poll closed" });
+    }
 
     // validate selection length
     if (!poll.multiple && selected.length > 1) {
@@ -239,6 +263,61 @@ router.delete("/:id", authenticate("representative"), async (req, res) => {
     await PollVote.destroy({ where: { pollId: id } });
     await poll.destroy();
     res.json({ message: "Poll deleted" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Update poll
+router.patch("/:id", authenticate("representative"), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const fields = (({ question, options, multiple, status, opensAt, closesAt }) => ({
+      question,
+      options,
+      multiple,
+      status,
+      opensAt,
+      closesAt,
+    }))(req.body);
+    Object.keys(fields).forEach((k) => fields[k] === undefined && delete fields[k]);
+    const poll = await Poll.findByPk(id);
+    if (!poll) return res.status(404).json({ message: "Not found" });
+
+    await poll.update(fields);
+    res.json(poll);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Create discussion from poll
+router.post("/:id/discussion", authenticate("representative"), async (req, res) => {
+  try {
+    const poll = await Poll.findByPk(req.params.id, { include: { model: PollVote, as: "votes" } });
+    if (!poll) return res.status(404).json({ message: "Poll not found" });
+    if (poll.discussionThreadId) {
+      return res.status(400).json({ message: "Discussion already exists" });
+    }
+
+    // Generate summary of results
+    const counts = Array(poll.options.length).fill(0);
+    poll.votes.forEach((v) => v.selected.forEach((idx) => counts[idx]++));
+    const lines = poll.options.map((opt, i) => `- ${opt}: ${counts[i]} votes`).join("\n");
+    const content = `Poll Results for **${poll.question}**\n\n${lines}`;
+
+    const thread = await ForumThread.create({
+      title: poll.question,
+      createdBy: req.user.id,
+      category: "poll_discussion",
+    });
+    await ForumPost.create({ threadId: thread.id, authorId: req.user.id, content });
+
+    await poll.update({ discussionThreadId: thread.id });
+
+    res.status(201).json(thread);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });

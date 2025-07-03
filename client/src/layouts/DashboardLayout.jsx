@@ -2,11 +2,14 @@ import { useState } from "react";
 import { Outlet } from "react-router-dom";
 import Navigation from "../components/Navigation.jsx";
 import Header from "../components/Header.jsx";
+import useQueueSync from "../hooks/useQueueSync.js";
 
 const DashboardLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const toggleSidebar = () => setSidebarOpen((v) => !v);
+
+  useQueueSync();
 
   return (
     <div className="flex h-screen bg-gray-100 overflow-hidden">

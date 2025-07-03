@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { getToken, getUser } from "../utils/auth.js";
 import { toast } from "react-toastify";
+import axios from "axios";
+import useOnlineStatus from "../hooks/useOnlineStatus.js";
+import { queueAction, generateId } from "../utils/db.js";
 
 const API_BASE = "http://localhost:5000";
 
@@ -9,16 +12,22 @@ const NewThreadForm = ({ onCreated }) => {
   const submit = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch(`${API_BASE}/api/forums/threads`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${getToken()}`,
-        },
-        body: JSON.stringify({ title }),
-      });
-      if (!res.ok) throw new Error("Failed");
-      const thread = await res.json();
+      const online = navigator.onLine;
+      let thread;
+      if (online) {
+        thread = (
+          await axios.post(
+            `${API_BASE}/api/forums/threads`,
+            { title },
+            { headers: { Authorization: `Bearer ${getToken()}` } }
+          )
+        ).data;
+      } else {
+        const action = { id: generateId(), type: "thread", payload: { title }, token: getToken() };
+        await queueAction(action);
+        toast.info("Thread queued for sync");
+        thread = { id: action.id, title, posts: [] };
+      }
       onCreated && onCreated(thread);
       setTitle("");
     } catch (err) {
@@ -42,9 +51,10 @@ const NewThreadForm = ({ onCreated }) => {
 const ThreadList = ({ onOpen }) => {
   const [threads, setThreads] = useState([]);
   const fetchThreads = async () => {
-    const res = await fetch(`${API_BASE}/api/forums/threads`, { headers: { Authorization: `Bearer ${getToken()}` } });
-    const data = await res.json();
-    setThreads(data);
+    try {
+      const { data } = await axios.get(`${API_BASE}/api/forums/threads`, { headers: { Authorization: `Bearer ${getToken()}` } });
+      setThreads(data);
+    } catch {}
   };
   useEffect(() => { fetchThreads(); }, []);
   const onCreated = (t) => setThreads((prev) => [t, ...prev]);
@@ -72,26 +82,31 @@ const ThreadView = ({ id, onBack }) => {
   const [thread, setThread] = useState(null);
   const [content, setContent] = useState("");
   const user = getUser();
+  const online = useOnlineStatus();
   const fetchThread = async () => {
-    const res = await fetch(`${API_BASE}/api/forums/threads/${id}`, { headers: { Authorization: `Bearer ${getToken()}` } });
-    const data = await res.json();
+    if (!online) {
+      toast.info("Thread not available offline");
+      return;
+    }
+    const { data } = await axios.get(`${API_BASE}/api/forums/threads/${id}`, { headers: { Authorization: `Bearer ${getToken()}` } });
     setThread(data);
   };
   useEffect(() => { fetchThread(); }, [id]);
   const submit = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch(`${API_BASE}/api/forums/threads/${id}/posts`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${getToken()}`,
-        },
-        body: JSON.stringify({ content }),
-      });
-      if (!res.ok) throw new Error();
-      const post = await res.json();
-      setThread((prev) => ({ ...prev, posts: [...prev.posts, post] }));
+      if (online) {
+        const { data: post } = await axios.post(
+          `${API_BASE}/api/forums/threads/${id}/posts`,
+          { content },
+          { headers: { Authorization: `Bearer ${getToken()}` } }
+        );
+        setThread((prev) => ({ ...prev, posts: [...prev.posts, post] }));
+      } else {
+        await queueAction({ id: generateId(), type: "forumPost", payload: { threadId: id, content }, token: getToken() });
+        setThread((prev) => ({ ...prev, posts: [...prev.posts, { id: generateId(), content }] }));
+        toast.info("Post queued");
+      }
       setContent("");
     } catch (err) {
       toast.error("Could not post");

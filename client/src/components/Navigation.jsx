@@ -2,6 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import { getUser } from "../utils/auth.js";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import useOnlineStatus from "../hooks/useOnlineStatus.js";
+import useNotifications from "../hooks/useNotifications.js";
 
 
 const baseLinks = [
@@ -40,6 +41,7 @@ const Navigation = ({ isOpen, onClose }) => {
   const role = user?.role || "citizen";
   const location = useLocation();
   const online = useOnlineStatus();
+  const { unreadCount } = useNotifications();
 
   let links = [...baseLinks];
   if (role === "citizen") {
@@ -61,9 +63,12 @@ const Navigation = ({ isOpen, onClose }) => {
       <Link
         to={to}
         onClick={onClose}
-        className={`block px-4 py-2 rounded hover:bg-indigo-700 ${active ? "bg-indigo-600" : ""}`}
+        className={`block px-4 py-2 rounded hover:bg-indigo-700 flex justify-between items-center ${active ? "bg-indigo-600" : ""}`}
       >
-        {label}
+        <span>{label}</span>
+        {unreadCount > 0 && (to === "messages" || to === "policy-management" || to === "policies") && (
+          <span className="inline-block h-2 w-2 rounded-full bg-red-500"></span>
+        )}
       </Link>
     );
   };

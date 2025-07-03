@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { getUser, getToken } from "../utils/auth.js";
+import { formatDateTime } from "../utils/datetime.js";
+import CountdownTimer from "../components/CountdownTimer.jsx";
 import axios from "axios";
+import ResourceCard from "../components/ResourceCard.jsx";
 
 const API_BASE = "http://localhost:5000";
 
@@ -11,6 +14,7 @@ const CitizenHome = () => {
   const [polls, setPolls] = useState([]);
   const [threads, setThreads] = useState([]);
   const [events, setEvents] = useState([]);
+  const [recentResources, setRecentResources] = useState([]);
 
   useEffect(() => {
     const load = async () => {
@@ -36,7 +40,11 @@ const CitizenHome = () => {
 
         // Events
         const ev = await axios.get(`${API_BASE}/api/events`, tokenHeader);
-        setEvents(ev.data);
+        const evSorted = [...ev.data].sort((a,b) => new Date(a.date) - new Date(b.date));
+        setEvents(evSorted);
+
+        const resRecent = await axios.get(`${API_BASE}/api/resources?recent=true`, tokenHeader);
+        setRecentResources(resRecent.data.slice(0, 5));
       } catch (err) {
         console.error(err);
       }
@@ -91,9 +99,28 @@ const CitizenHome = () => {
         <h3 className="font-semibold mb-2">Upcoming Events</h3>
         <ul className="space-y-1 text-sm max-h-40 overflow-auto">
           {events.map((ev) => (
-            <li key={ev.id}>{new Date(ev.date).toLocaleDateString()} – {ev.title}</li>
+            <li key={ev.id} className="flex items-center gap-2">
+              <span>{formatDateTime(ev.date)}</span>
+              <CountdownTimer date={ev.date} />
+              <span>– {ev.title}</span>
+            </li>
           ))}
           {events.length === 0 && <p>No events scheduled.</p>}
+        </ul>
+      </div>
+
+      {/* Recent Resources */}
+      <div className="bg-white p-4 rounded shadow">
+        <h3 className="font-semibold mb-2">Recently Accessed Resources</h3>
+        <ul className="space-y-2 text-sm max-h-40 overflow-auto">
+          {recentResources.map((r) => (
+            <li key={r.id} className="flex justify-between items-center">
+              <a href={r.externalUrl || r.fileUrl} target="_blank" rel="noreferrer" className="text-indigo-600 underline truncate">
+                {r.title}
+              </a>
+            </li>
+          ))}
+          {recentResources.length === 0 && <p>No recent resources.</p>}
         </ul>
       </div>
 

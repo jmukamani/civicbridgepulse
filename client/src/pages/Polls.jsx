@@ -1,8 +1,15 @@
 import { useEffect, useState } from "react";
 import { getToken, getUser } from "../utils/auth.js";
 import { toast } from "react-toastify";
+import ActionMenu from "../components/ActionMenu.jsx";
+import { Dialog } from "@headlessui/react";
+import axios from "axios";
+import useOnlineStatus from "../hooks/useOnlineStatus.js";
+import { queueAction, generateId } from "../utils/db.js";
 
 const API_BASE = "http://localhost:5000";
+
+const defaultPoll = { question: "", options: ["", ""], multiple: false, opensAt: "", closesAt: "" };
 
 const PollForm = ({ onCreated }) => {
   const [question, setQuestion] = useState("");
@@ -74,7 +81,7 @@ const PollForm = ({ onCreated }) => {
   );
 };
 
-const PollCard = ({ poll, onVote }) => {
+const PollCard = ({ poll, onVote, onEdit, onCreateDiscussion }) => {
   const user = getUser();
   const [selected, setSelected] = useState([]);
   const voted = poll.votes?.some((v)=>v.voterId===user.id);
@@ -101,7 +108,7 @@ const PollCard = ({ poll, onVote }) => {
   };
 
   return (
-    <div className="border rounded p-4 space-y-2">
+    <div className="border rounded p-4 space-y-2 relative">
       <h3 className="font-semibold">{poll.question}</h3>
       {voted || user.role==='representative' ? (
         <div className="space-y-1">
@@ -120,7 +127,7 @@ const PollCard = ({ poll, onVote }) => {
               <span className="text-xs">{poll.votesCount?.[idx] ?? 0}</span>
             </div>
           ))}
-          <p className="text-xs text-green-700">{voted?"You voted":"Results"}</p>
+          {voted && <p className="text-xs text-green-700">You voted</p>}
         </div>
       ) : (
       <ul className="space-y-1">
@@ -147,7 +154,22 @@ const PollCard = ({ poll, onVote }) => {
         Vote
       </button>)}
       {user.role==='representative' && (
-        <button onClick={deletePoll} className="text-red-600 text-xs ml-2">Delete</button>
+        <div className="absolute top-2 right-2">
+          <ActionMenu
+            actions={[
+              { label: "Edit", onClick: onEdit },
+              { label: "Create Discussion", onClick: onCreateDiscussion },
+              {
+                label: "Share",
+                onClick: () => {
+                  navigator.clipboard.writeText(`${window.location.origin}/dashboard/polls#${poll.id}`);
+                  toast.success("Link copied");
+                },
+              },
+              { label: "Delete", onClick: deletePoll },
+            ]}
+          />
+        </div>
       )}
     </div>
   );
@@ -156,21 +178,27 @@ const PollCard = ({ poll, onVote }) => {
 const Polls = () => {
   const [polls, setPolls] = useState([]);
   const user = getUser();
+  const [editPoll, setEditPoll] = useState(null);
+  const online = useOnlineStatus();
 
   const fetchPolls = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/polls`, { headers: { Authorization: `Bearer ${getToken()}` } });
-      const list = await res.json();
-      const dets = await Promise.all(list.map(async p=>{
-        const d = await fetch(`${API_BASE}/api/polls/${p.id}`, { headers: { Authorization: `Bearer ${getToken()}` } }).then(r=>r.json());
-        // compute counts
-        const counts=Array(p.options.length).fill(0);
-        d.votes.forEach(v=>v.selected.forEach(i=>counts[i]++));
-        d.votesCount=counts; d.totalVotes=d.votes.length;
-        return d;
-      }));
+      const headers = { Authorization: `Bearer ${getToken()}` };
+      const listRes = await axios.get(`${API_BASE}/api/polls`, { headers });
+      const dets = await Promise.all(
+        listRes.data.map(async (p) => {
+          const d = await axios.get(`${API_BASE}/api/polls/${p.id}`, { headers }).then((r) => r.data);
+          const counts = Array(p.options.length).fill(0);
+          d.votes.forEach((v) => v.selected.forEach((i) => counts[i]++));
+          d.votesCount = counts;
+          d.totalVotes = d.votes.length;
+          return d;
+        })
+      );
       setPolls(dets);
-    } catch (err) {}
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   useEffect(() => {
@@ -178,18 +206,21 @@ const Polls = () => {
   }, []);
 
   const vote = async (id, selected) => {
-    try {
-      await fetch(`${API_BASE}/api/polls/${id}/vote`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${getToken()}`,
-        },
-        body: JSON.stringify({ selected }),
-      });
-      toast.success("Vote cast");
-    } catch (err) {
-      toast.error("Could not vote");
+    if (online) {
+      try {
+        await axios.post(
+          `${API_BASE}/api/polls/${id}/vote`,
+          { selected },
+          { headers: { Authorization: `Bearer ${getToken()}` } }
+        );
+        toast.success("Vote submitted");
+        fetchPolls();
+      } catch (err) {
+        toast.error("Could not vote");
+      }
+    } else {
+      await queueAction({ id: generateId(), type: "pollVote", payload: { pollId: id, selected }, token: getToken() });
+      toast.info("Vote queued for sync");
     }
   };
 
@@ -201,17 +232,92 @@ const Polls = () => {
     setPolls((prev) => [poll, ...prev]);
   };
 
+  const saveEdit = async () => {
+    if (!editPoll) return;
+    try {
+      const payload = { ...editPoll };
+      // Convert opensAt/closesAt to ISO if provided
+      if (payload.opensAt) payload.opensAt = new Date(payload.opensAt);
+      if (payload.closesAt) payload.closesAt = new Date(payload.closesAt);
+      await fetch(`${API_BASE}/api/polls/${editPoll.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify(payload),
+      });
+      toast.success("Poll updated");
+      setEditPoll(null);
+      fetchPolls();
+    } catch (err) {
+      toast.error("Could not update");
+    }
+  };
+
+  const createDiscussion = async (poll) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/polls/${poll.id}/discussion`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      if (!res.ok) throw new Error();
+      toast.success("Discussion created");
+    } catch {
+      toast.error("Could not create discussion");
+    }
+  };
+
   return (
     <div className="space-y-4">
-      {user.role === "representative" && <PollForm onCreated={onCreated} />}
       <h2 className="text-lg font-bold">Active Polls</h2>
       <div className="space-y-4">
         {polls.map((poll) => {
           poll._onDeleted = () => setPolls(prev=>prev.filter(p=>p.id!==poll.id));
-          return <PollCard key={poll.id} poll={poll} onVote={vote} />;
+          return (
+            <PollCard
+              key={poll.id}
+              poll={poll}
+              onVote={vote}
+              onEdit={() => setEditPoll({ ...poll, opensAt: poll.opensAt ? poll.opensAt.split("T")[0] : "", closesAt: poll.closesAt ? poll.closesAt.split("T")[0] : "" })}
+              onCreateDiscussion={() => createDiscussion(poll)}
+            />
+          );
         })}
         {polls.length === 0 && <p>No polls available</p>}
       </div>
+
+      {/* Edit Modal */}
+      {editPoll && (
+        <Dialog open={true} onClose={() => setEditPoll(null)} className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen p-4">
+            <Dialog.Overlay className="fixed inset-0 bg-black opacity-50" />
+            <div className="bg-white max-w-lg w-full p-6 rounded shadow-lg relative z-10 space-y-3">
+              <h3 className="text-lg font-semibold">Edit Poll</h3>
+              <input className="border w-full px-3 py-2 rounded" value={editPoll.question} onChange={(e)=>setEditPoll({...editPoll, question:e.target.value})} />
+              {editPoll.options.map((opt, idx)=> (
+                <input key={idx} className="border w-full px-3 py-2 rounded" value={opt} onChange={(e)=>{
+                  const arr=[...editPoll.options]; arr[idx]=e.target.value; setEditPoll({...editPoll, options:arr}); }} />
+              ))}
+              <button className="text-xs text-indigo-600" onClick={()=>setEditPoll({...editPoll, options:[...editPoll.options, ""]})}>+ Add option</button>
+              <label className="block"><input type="checkbox" checked={editPoll.multiple} onChange={(e)=>setEditPoll({...editPoll, multiple:e.target.checked})}/> Allow multiple</label>
+              <div className="flex gap-2">
+                <div>
+                  <label className="text-xs">Opens</label>
+                  <input type="date" value={editPoll.opensAt} onChange={(e)=>setEditPoll({...editPoll, opensAt:e.target.value})} className="border px-2 py-1" />
+                </div>
+                <div>
+                  <label className="text-xs">Closes</label>
+                  <input type="date" value={editPoll.closesAt} onChange={(e)=>setEditPoll({...editPoll, closesAt:e.target.value})} className="border px-2 py-1" />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <button className="px-4 py-2 bg-gray-200 rounded" onClick={()=>setEditPoll(null)}>Cancel</button>
+                <button className="px-4 py-2 bg-indigo-600 text-white rounded" onClick={saveEdit}>Save</button>
+              </div>
+            </div>
+          </div>
+        </Dialog>
+      )}
+
+      {user.role === "representative" && <PollForm onCreated={onCreated} />}
     </div>
   );
 };

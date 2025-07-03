@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { getUser, getToken, removeToken } from "../utils/auth.js";
 import { toast } from "react-toastify";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import NotificationPreferences from "../components/NotificationPreferences.jsx";
 
 const API_BASE = "http://localhost:5000";
 
@@ -60,6 +62,7 @@ const CitizenSettings = ({ initial }) => {
         </label>
         <button className="bg-indigo-600 text-white px-4 py-2 rounded">Save</button>
       </form>
+      <NotificationPreferences />
       <div className="bg-white p-4 rounded shadow">
         <button
           onClick={() => {
@@ -113,6 +116,7 @@ const RepSettings = ({ initial }) => {
         </label>
         <button className="bg-indigo-600 text-white px-4 py-2 rounded">Save</button>
       </form>
+      <NotificationPreferences />
       <div className="bg-white p-4 rounded shadow">
         <button
           onClick={() => {

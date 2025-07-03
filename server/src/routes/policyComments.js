@@ -2,6 +2,7 @@ import express from "express";
 import { authenticate } from "../middleware/auth.js";
 import PolicyComment from "../models/PolicyComment.js";
 import PolicyDocument from "../models/PolicyDocument.js";
+import { sendNotification } from "../utils/notify.js";
 
 const router = express.Router();
 
@@ -117,6 +118,12 @@ router.post("/:policyId/comments", authenticate(), async (req, res) => {
       if (policy) {
         const io = req.app.get("io");
         io.to(policy.uploadedBy).emit("policy_comment", { policyId: policy.id });
+        await sendNotification(io, policy.uploadedBy, {
+          type: "policy_comment",
+          title: `New comment on policy ${policy.title}`,
+          body: content.slice(0, 100),
+          data: { policyId: policy.id, commentId: comment.id },
+        });
       }
     } catch {}
 

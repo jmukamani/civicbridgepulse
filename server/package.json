@@ -33,7 +33,8 @@
     "sequelize": "^6.32.1",
     "socket.io": "^4.7.4",
     "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^4.6.1"
+    "swagger-ui-express": "^4.6.1",
+    "web-push": "^3.5.0"
   },
   "devDependencies": {
     "@babel/core": "^7.23.0",

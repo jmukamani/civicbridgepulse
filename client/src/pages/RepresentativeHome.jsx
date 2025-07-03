@@ -1,8 +1,13 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { getUser, getToken } from "../utils/auth.js";
+import { formatDateTime } from "../utils/datetime.js";
 import useSocket from "../hooks/useSocket.js";
+import { toast } from "react-toastify";
+import ActionMenu from "../components/ActionMenu.jsx";
+import ResourceCard from "../components/ResourceCard.jsx";
+import CountdownTimer from "../components/CountdownTimer.jsx";
 
 const API_BASE = "http://localhost:5000";
 
@@ -26,24 +31,29 @@ const RepresentativeHome = () => {
   const [threads, setThreads] = useState([]);
   const [policies, setPolicies] = useState([]);
   const [events, setEvents] = useState([]);
+  const [recentResources, setRecentResources] = useState([]);
   const socketRef = useSocket();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const load = async () => {
       try {
         const tokenHeader = { headers: { Authorization: `Bearer ${getToken()}` } };
-        const [issRes, pollRes, threadRes, policyRes, eventsRes] = await Promise.all([
+        const [issRes, pollRes, threadRes, policyRes, eventsRes, resourcesRes] = await Promise.all([
           axios.get(`${API_BASE}/api/issues`, tokenHeader),
           axios.get(`${API_BASE}/api/polls`, tokenHeader),
           axios.get(`${API_BASE}/api/forums/threads`, tokenHeader),
           axios.get(`${API_BASE}/api/policies`, tokenHeader),
           axios.get(`${API_BASE}/api/events`, tokenHeader),
+          axios.get(`${API_BASE}/api/resources?recent=true`, tokenHeader),
         ]);
 
         setIssues(issRes.data);
         setThreads(threadRes.data);
         setPolicies(policyRes.data);
-        setEvents(eventsRes.data);
+        const evSorted = [...eventsRes.data].sort((a,b)=> new Date(a.date) - new Date(b.date));
+        setEvents(evSorted);
+        setRecentResources(resourcesRes.data);
 
         // Poll details with votes
         const dets = await Promise.all(
@@ -115,7 +125,7 @@ const RepresentativeHome = () => {
           title="Scheduled Events"
           value={events.length}
           icon={<span>📅</span>}
-          note={events.length ? "next: "+ new Date(events[0].date).toLocaleDateString() : "none"}
+          note={events.length ? `next: ${formatDateTime(events[0].date)}` : "none"}
         />
         <StatCard
           title="Budget Allocation"
@@ -123,6 +133,21 @@ const RepresentativeHome = () => {
           icon={<span>💰</span>}
           note={totalBudget ? "based on uploaded budgets" : undefined}
         />
+      </div>
+
+      {/* Scheduled Events */}
+      <div className="bg-white p-4 rounded shadow">
+        <h3 className="font-semibold mb-2">Scheduled Events</h3>
+        <ul className="space-y-1 text-sm max-h-40 overflow-auto">
+          {events.map((ev) => (
+            <li key={ev.id} className="flex items-center gap-2">
+              <span>{formatDateTime(ev.date)}</span>
+              <CountdownTimer date={ev.date} />
+              <span>– {ev.title}</span>
+            </li>
+          ))}
+          {events.length === 0 && <p>No events scheduled.</p>}
+        </ul>
       </div>
 
       {/* Policies management table */}
@@ -174,11 +199,20 @@ const RepresentativeHome = () => {
                     {p.status}
                   </span>
                 </td>
-                <td className="px-6 py-3 space-x-3">
-                  <Link to="policy-management" className="text-indigo-600 text-xs hover:underline">
-                    Edit
-                  </Link>
-                  <Link to={`/dashboard/policy-management/${p.id}`} className="text-indigo-600 text-xs hover:underline">Comments</Link>
+                <td className="px-6 py-3">
+                  <ActionMenu
+                    actions={[
+                      { label: "Edit", onClick: () => navigate("/dashboard/policy-management") },
+                      { label: "Comments", onClick: () => navigate(`/dashboard/policy-management/${p.id}`) },
+                      {
+                        label: "Share",
+                        onClick: () => {
+                          navigator.clipboard.writeText(`${window.location.origin}/dashboard/policies/view/${p.id}`);
+                          toast.success("Link copied to clipboard");
+                        },
+                      },
+                    ]}
+                  />
                 </td>
               </tr>
             ))}
@@ -191,6 +225,21 @@ const RepresentativeHome = () => {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Recent Resources */}
+      <div className="bg-white rounded shadow p-4">
+        <h3 className="font-semibold mb-2">My Recent Resources</h3>
+        <ul className="space-y-2 text-sm max-h-40 overflow-auto">
+          {recentResources.map((r) => (
+            <li key={r.id} className="flex justify-between items-center">
+              <a href={r.externalUrl || r.fileUrl} target="_blank" rel="noreferrer" className="text-indigo-600 underline truncate">
+                {r.title}
+              </a>
+            </li>
+          ))}
+          {recentResources.length === 0 && <p>No recent resources.</p>}
+        </ul>
       </div>
     </div>
   );

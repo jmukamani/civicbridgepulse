@@ -285,4 +285,77 @@ router.delete("/:id", authenticate(["representative", "admin"]), async (req, res
   }
 });
 
+// Update policy document metadata (representative/admin)
+router.patch("/:id", authenticate(["representative", "admin"]), async (req, res) => {
+  try {
+    const id = req.params.id;
+    const fields = (({ title, category, summary_en, summary_sw, status, budget }) => ({
+      title,
+      category,
+      summary_en,
+      summary_sw,
+      status,
+      budget,
+    }))(req.body);
+
+    // Remove undefined so we only update specified keys
+    Object.keys(fields).forEach((k) => fields[k] === undefined && delete fields[k]);
+
+    const doc = await PolicyDocument.findByPk(id);
+    if (!doc) return res.status(404).json({ message: "Policy not found" });
+
+    // Representatives can only update docs from their county (simple scope check)
+    if (req.user.role === "representative" && req.user.county && doc.county !== req.user.county) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    // Parse budget JSON string if provided as string
+    if (fields.budget && typeof fields.budget === "string") {
+      try {
+        fields.budget = JSON.parse(fields.budget);
+      } catch {
+        return res.status(400).json({ message: "Invalid budget JSON" });
+      }
+    }
+
+    await doc.update(fields);
+    return res.json(doc);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Server error" });
+  }
+});
+
+/**
+ * Bulk delete policy documents
+ * Body: { ids: ["uuid", ...] }
+ */
+router.post("/bulk-delete", authenticate(["representative", "admin"]), async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ message: "ids array required" });
+
+    const docs = await PolicyDocument.findAll({ where: { id: ids } });
+    const unauthorized = docs.some((d) => req.user.role === "representative" && req.user.county && d.county !== req.user.county);
+    if (unauthorized) return res.status(403).json({ message: "Some documents cannot be deleted" });
+
+    // Delete files and db rows
+    for (const d of docs) {
+      if (d.filePath && fs.existsSync(d.filePath)) {
+        try {
+          fs.unlinkSync(d.filePath);
+        } catch (e) {
+          console.error("File delete error", e);
+        }
+      }
+      await d.destroy();
+    }
+
+    res.json({ message: "Documents deleted", count: docs.length });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 export default router; 

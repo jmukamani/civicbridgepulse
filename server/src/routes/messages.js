@@ -5,6 +5,7 @@ import { Op } from "sequelize";
 import MessageRating from "../models/MessageRating.js";
 import sequelize from "../config/db.js";
 import { logInteraction } from "../utils/logInteraction.js";
+import { sendNotification } from "../utils/notify.js";
 
 const router = express.Router();
 
@@ -70,6 +71,12 @@ router.post("/send", authenticate(), async (req, res) => {
     const io = req.app.get("io");
     if (io) {
       io.to(recipientId).emit("new_message", msg);
+      await sendNotification(io, recipientId, {
+        type: "message",
+        title: "New message received",
+        body: content.slice(0, 100),
+        data: { messageId: msg.id, senderId: req.user.id },
+      });
     }
     res.status(201).json(msg);
   } catch (err) {

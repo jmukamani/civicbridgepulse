@@ -30,8 +30,20 @@ Issue.init(
       defaultValue: "other",
     },
     status: {
-      type: DataTypes.ENUM("reported", "acknowledged", "resolved"),
+      type: DataTypes.ENUM(
+        "reported",
+        "acknowledged",
+        "in_progress",
+        "blocked",
+        "under_review",
+        "resolved",
+        "closed"
+      ),
       defaultValue: "reported",
+    },
+    priority: {
+      type: DataTypes.ENUM("low", "medium", "high", "critical"),
+      defaultValue: "medium",
     },
     latitude: {
       type: DataTypes.FLOAT,

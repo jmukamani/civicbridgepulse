@@ -2,6 +2,7 @@ import { useState } from "react";
 import { getUser, removeToken } from "../utils/auth.js";
 import { useNavigate } from "react-router-dom";
 import { Bars3Icon } from "@heroicons/react/24/outline";
+import NotificationBell from "./NotificationBell.jsx";
 
 const Header = ({ onToggleSidebar }) => {
   const user = getUser();
@@ -21,7 +22,8 @@ const Header = ({ onToggleSidebar }) => {
         </button>
         <h1 className="text-xl font-bold">CivicBridgePulse</h1>
       </div>
-      <div className="relative">
+      <div className="relative flex items-center gap-4">
+        <NotificationBell />
         <button onClick={() => setMenuOpen((v) => !v)} className="flex items-center space-x-2">
           <span className="font-medium">{user?.email}</span>
           <img

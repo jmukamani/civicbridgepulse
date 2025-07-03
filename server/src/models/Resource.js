@@ -2,9 +2,9 @@ import { DataTypes, Model } from "sequelize";
 import sequelize from "../config/db.js";
 import User from "./User.js";
 
-class Event extends Model {}
+class Resource extends Model {}
 
-Event.init(
+Resource.init(
   {
     id: {
       type: DataTypes.UUID,
@@ -19,25 +19,22 @@ Event.init(
       type: DataTypes.TEXT,
       allowNull: true,
     },
-    date: {
-      type: DataTypes.DATE,
-      allowNull: false,
+    fileUrl: {
+      type: DataTypes.STRING,
+      allowNull: true,
     },
-    capacity: {
-      type: DataTypes.INTEGER,
+    externalUrl: {
+      type: DataTypes.STRING,
       allowNull: true,
     },
     category: {
       type: DataTypes.STRING,
       allowNull: true,
     },
-    location: {
-      type: DataTypes.STRING,
+    tags: {
+      type: DataTypes.ARRAY(DataTypes.STRING),
       allowNull: true,
-    },
-    county: {
-      type: DataTypes.STRING,
-      allowNull: true,
+      defaultValue: [],
     },
     createdBy: {
       type: DataTypes.UUID,
@@ -46,13 +43,13 @@ Event.init(
   },
   {
     sequelize,
-    modelName: "Event",
-    tableName: "events",
+    modelName: "Resource",
+    tableName: "resources",
     timestamps: true,
   }
 );
 
-User.hasMany(Event, { foreignKey: "createdBy", as: "events" });
-Event.belongsTo(User, { foreignKey: "createdBy", as: "creator" });
+User.hasMany(Resource, { foreignKey: "createdBy", as: "resources" });
+Resource.belongsTo(User, { foreignKey: "createdBy", as: "creator" });
 
-export default Event; 
+export default Resource; 

@@ -11,11 +11,18 @@ export const authenticate = (roles = []) => {
 
   return (req, res, next) => {
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    let token;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      token = authHeader.split(" ")[1];
+    } else if (req.query && req.query.token) {
+      // allow token via query string for direct file links / iframe embeds
+      token = req.query.token;
+    }
+
+    if (!token) {
       return res.status(401).json({ message: "No token provided" });
     }
 
-    const token = authHeader.split(" ")[1];
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       req.user = decoded;

@@ -12,6 +12,8 @@ import pollsRoutes from "./routes/polls.js";
 import policyCommentsRoutes from "./routes/policyComments.js";
 import forumsRoutes from "./routes/forums.js";
 import analyticsRoutes from "./routes/analytics.js";
+import resourcesRoutes from "./routes/resources.js";
+import notificationsRoutes from "./routes/notifications.js";
 import swaggerUi from "swagger-ui-express";
 import swaggerSpec from "./swagger.js";
 import eventsRoutes from "./routes/events.js";
@@ -35,6 +37,8 @@ app.use("/api/polls", pollsRoutes);
 app.use("/api/policies", policyCommentsRoutes);
 app.use("/api/forums", forumsRoutes);
 app.use("/api/analytics", analyticsRoutes);
+app.use("/api/resources", resourcesRoutes);
+app.use("/api/notifications", notificationsRoutes);
 app.use("/api/events", eventsRoutes);
 
 // Swagger docs endpoints
@@ -51,6 +55,16 @@ const PORT = process.env.PORT || 5000;
     await sequelize.authenticate();
     await sequelize.sync({ alter: true });
     console.log("Database connected and synced");
+
+    // Ensure text-search index for resources
+    try {
+      await sequelize.query("CREATE EXTENSION IF NOT EXISTS pg_trgm;");
+      await sequelize.query(
+        "CREATE INDEX IF NOT EXISTS idx_resources_search ON resources USING GIN (to_tsvector('simple', coalesce(title,'') || ' ' || coalesce(description,'')));"
+      );
+    } catch (e) {
+      console.error("FTS index creation failed", e);
+    }
 
     const server = app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);

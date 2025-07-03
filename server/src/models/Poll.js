@@ -25,8 +25,20 @@ Poll.init(
       defaultValue: false,
     },
     status: {
-      type: DataTypes.ENUM("open", "closed"),
+      type: DataTypes.ENUM("scheduled", "open", "closed"),
       defaultValue: "open",
+    },
+    opensAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    closesAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    discussionThreadId: {
+      type: DataTypes.UUID,
+      allowNull: true,
     },
     createdBy: {
       type: DataTypes.UUID,

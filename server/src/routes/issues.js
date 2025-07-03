@@ -2,6 +2,9 @@ import express from "express";
 import { authenticate } from "../middleware/auth.js";
 import Issue from "../models/Issue.js";
 import { logInteraction } from "../utils/logInteraction.js";
+import IssueStatusHistory from "../models/IssueStatusHistory.js";
+import { Op } from "sequelize";
+import { sendNotification } from "../utils/notify.js";
 
 const router = express.Router();
 
@@ -87,16 +90,28 @@ router.post("/", authenticate("citizen"), async (req, res) => {
  *         description: Server error
  */
 
-// List issues relevant to current user
+// Enhanced list with filters & search
 router.get("/", authenticate(), async (req, res) => {
   try {
+    const { status, category, priority, q, from, to } = req.query;
     const where = {};
+
+    // Scope by county
     const userCounty = req.user.county;
-    if (req.user.role === "citizen") {
-      if (userCounty) where.county = userCounty;
-    } else if (req.user.role === "representative") {
-      if (userCounty) where.county = userCounty;
+    if (userCounty) where.county = userCounty;
+
+    if (status) where.status = status;
+    if (category) where.category = category;
+    if (priority) where.priority = priority;
+    if (from || to) {
+      where.createdAt = {};
+      if (from) where.createdAt[Op.gte] = new Date(from);
+      if (to) where.createdAt[Op.lte] = new Date(to);
     }
+    if (q) {
+      where.title = { [Op.iLike]: `%${q}%` };
+    }
+
     const issues = await Issue.findAll({ where, order: [["createdAt", "DESC"]] });
     res.json(issues);
   } catch (err) {
@@ -209,27 +224,67 @@ router.post("/:id/assign", authenticate(["representative", "admin"]), async (req
 router.patch("/:id/status", authenticate(), async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body; // expected "acknowledged" or "resolved"
+    const { status, note } = req.body;
 
-    if (!["reported", "acknowledged", "resolved"].includes(status)) {
+    const allowed = [
+      "reported",
+      "acknowledged",
+      "in_progress",
+      "blocked",
+      "under_review",
+      "resolved",
+      "closed",
+    ];
+    if (!allowed.includes(status)) {
       return res.status(400).json({ message: "Invalid status" });
     }
 
     const issue = await Issue.findByPk(id);
     if (!issue) return res.status(404).json({ message: "Issue not found" });
 
-    // Permission checks
+    // Permission checks for representatives & admins, citizens only allowed reported->closed maybe
     if (req.user.role === "citizen" && issue.citizenId !== req.user.id) {
       return res.status(403).json({ message: "Forbidden" });
     }
-
     if (req.user.role === "representative" && issue.representativeId !== req.user.id) {
       return res.status(403).json({ message: "Forbidden" });
     }
 
     issue.status = status;
     await issue.save();
+
+    // Log history
+    await IssueStatusHistory.create({ issueId: id, status, changedBy: req.user.id, note: note || null });
+
+    // Real-time notification to reporting citizen
+    const io = req.app.get("io");
+    if (io) {
+      io.to(issue.citizenId).emit("issue_status", {
+        issueId: id,
+        status,
+        note: note || null,
+      });
+      await sendNotification(io, issue.citizenId, {
+        type: "issue_status",
+        title: `Issue status updated to ${status}`,
+        body: note || issue.title,
+        data: { issueId: id, status },
+      });
+    }
+
     res.json(issue);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Timeline endpoint
+router.get("/:id/history", authenticate(), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const history = await IssueStatusHistory.findAll({ where: { issueId: id }, order: [["createdAt", "ASC"]] });
+    res.json(history);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });

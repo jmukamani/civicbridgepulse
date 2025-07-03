@@ -33,6 +33,11 @@ const useSocket = () => {
       notifyInfo("New civic event scheduled");
     });
 
+    socket.on("issue_status", ({ issueId, status }) => {
+      notifyInfo(`Issue status updated to ${status.replace(/_/g, " ")}`);
+      window.dispatchEvent(new CustomEvent("issue_status", { detail: { issueId, status } }));
+    });
+
     return () => {
       socket.disconnect();
     };

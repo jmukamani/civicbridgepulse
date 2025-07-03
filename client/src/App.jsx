@@ -6,11 +6,24 @@ import Dashboard from "./pages/Dashboard.jsx";
 import Landing from "./pages/Landing.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import VerifyEmail from "./components/VerifyEmail.jsx";
+import useOnlineStatus from "./hooks/useOnlineStatus.js";
+import { useEffect } from "react";
+import { toast } from "react-toastify";
 
 const App = () => {
   const { i18n } = useTranslation();
   const location = useLocation();
   const onLanding = location.pathname === "/";
+  const online = useOnlineStatus();
+
+  useEffect(() => {
+    if (online) {
+      toast.dismiss('offline');
+      toast.success('Back online', { toastId: 'online' });
+    } else {
+      toast.error('You are offline. Some features may be limited.', { toastId: 'offline', autoClose: false });
+    }
+  }, [online]);
 
   const changeLanguage = (lng) => {
     i18n.changeLanguage(lng);
