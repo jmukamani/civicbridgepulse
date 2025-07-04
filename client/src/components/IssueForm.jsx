@@ -49,6 +49,7 @@ const IssueForm = ({ onCreated }) => {
           id: generateId(),
           type: "issue",
           payload: form,
+          token: getToken(),
         };
         await queueAction(offlineAction);
         toast.info("Issue queued for sync when online");
