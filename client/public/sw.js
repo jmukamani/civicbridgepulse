@@ -1,4 +1,3 @@
-// Load idb-keyval in this classic worker context so we can manipulate IndexedDB without disallowed dynamic import()
 importScripts('https://cdn.jsdelivr.net/npm/idb-keyval@6/dist/idb-keyval-iife.min.js');
 
 const CACHE_NAME = "cbp-cache-v1";
@@ -47,7 +46,6 @@ self.addEventListener("fetch", (event) => {
           return resp;
         })
         .catch(async () => {
-          // Avoid Cache API for non-GET requests (e.g. POST) – it would throw and break the response chain
           if (request.method === 'GET') {
             const cached = await caches.match(request);
             if (cached) return cached;
@@ -62,7 +60,6 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Other GET requests: cache-first
   event.respondWith(
     caches.match(request).then((cached) =>
       cached || fetch(request).then((resp) => {
@@ -130,7 +127,6 @@ async function handleSync(){
         });
       }
 
-      // If we got here without throwing, the request completed – remove from the queue
       await idbKeyval.del(key);
     } catch (err) {
       console.error('sync error', err);

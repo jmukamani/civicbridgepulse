@@ -2,6 +2,7 @@ import express from "express";
 import { authenticate } from "../middleware/auth.js";
 import ForumThread from "../models/ForumThread.js";
 import ForumPost from "../models/ForumPost.js";
+import User from "../models/User.js";
 import { logInteraction } from "../utils/logInteraction.js";
 
 const router = express.Router();
@@ -92,7 +93,21 @@ router.post("/threads", authenticate(), async (req, res) => {
 // List threads
 router.get("/threads", authenticate(), async (req, res) => {
   try {
-    const threads = await ForumThread.findAll({ order: [["createdAt", "DESC"]] });
+    // Include number of posts (replies) per thread
+    const threads = await ForumThread.findAll({
+      attributes: {
+        include: [
+          [
+            // Count the number of posts for each thread using a sub-query
+            ForumThread.sequelize.literal(`(
+              SELECT COUNT(*) FROM "forum_posts" AS posts WHERE posts."threadId" = "ForumThread"."id"
+            )`),
+            "postCount",
+          ],
+        ],
+      },
+      order: [["createdAt", "DESC"]],
+    });
     res.json(threads);
   } catch (err) {
     console.error(err);
@@ -128,7 +143,11 @@ router.get("/threads", authenticate(), async (req, res) => {
 router.get("/threads/:id", authenticate(), async (req, res) => {
   try {
     const thread = await ForumThread.findByPk(req.params.id, {
-      include: { model: ForumPost, as: "posts" },
+      include: {
+        model: ForumPost,
+        as: "posts",
+        include: { model: User, as: "author", attributes: ["id", "role", "name"] },
+      },
       order: [[{ model: ForumPost, as: "posts" }, "createdAt", "ASC"]],
     });
     if (!thread) return res.status(404).json({ message: "Not found" });

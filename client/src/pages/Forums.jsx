@@ -69,7 +69,14 @@ const ThreadList = ({ onOpen }) => {
             className="p-3 border rounded hover:bg-gray-100 cursor-pointer"
             onClick={() => onOpen(th.id)}
           >
-            {th.title}
+            <div className="flex justify-between items-center">
+              <span>{th.title}</span>
+              {typeof th.postCount !== "undefined" && (
+                <span className="text-sm bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full">
+                  {th.postCount}
+                </span>
+              )}
+            </div>
           </li>
         ))}
       </ul>
@@ -104,7 +111,7 @@ const ThreadView = ({ id, onBack }) => {
         setThread((prev) => ({ ...prev, posts: [...prev.posts, post] }));
       } else {
         await queueAction({ id: generateId(), type: "forumPost", payload: { threadId: id, content }, token: getToken() });
-        setThread((prev) => ({ ...prev, posts: [...prev.posts, { id: generateId(), content }] }));
+        setThread((prev) => ({ ...prev, posts: [...prev.posts, { id: generateId(), content, authorId: user.id }] }));
         toast.info("Post queued");
       }
       setContent("");
@@ -117,12 +124,24 @@ const ThreadView = ({ id, onBack }) => {
     <div>
       <button onClick={onBack} className="text-indigo-600 mb-2">← Back</button>
       <h2 className="text-lg font-bold mb-2">{thread.title}</h2>
-      <ul className="space-y-2 mb-4">
-        {thread.posts?.map((p) => (
-          <li key={p.id} className="border p-2 rounded">
-            {p.content}
-          </li>
-        ))}
+      <ul className="flex flex-col space-y-2 mb-4">
+        {thread.posts?.map((p) => {
+          const mine = user && p.authorId === user.id;
+          let bubbleClass = "self-start bg-gray-100";
+          if (mine) {
+            bubbleClass = "self-end bg-green-100";
+          } else if (p.author?.role === "representative") {
+            bubbleClass = "self-start bg-indigo-100";
+          }
+          return (
+            <li
+              key={p.id}
+              className={`max-w-xs rounded px-3 py-2 text-sm shadow ${bubbleClass}`}
+            >
+              {p.content}
+            </li>
+          );
+        })}
         {thread.posts?.length === 0 && <p>No replies yet.</p>}
       </ul>
       {user && (
