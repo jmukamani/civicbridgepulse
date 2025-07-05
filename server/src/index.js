@@ -21,7 +21,13 @@ import eventsRoutes from "./routes/events.js";
 dotenv.config();
 
 const app = express();
-app.use(cors());
+const CLIENT_ORIGIN = process.env.CLIENT_URL || "http://localhost:5173";
+app.use(
+  cors({
+    origin: CLIENT_ORIGIN,
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 app.get("/api/health", (req, res) => {

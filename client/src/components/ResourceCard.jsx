@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { getToken } from "../utils/auth.js";
 import { toast } from "react-toastify";
+import { queueAction, generateId } from "../utils/db.js";
 
 const API_BASE = "http://localhost:5000";
 
@@ -11,11 +12,17 @@ const ResourceCard = ({ res, onBookmarkToggle }) => {
     if (processing) return;
     setProcessing(true);
     try {
-      const r = await fetch(`${API_BASE}/api/resources/${res.id}/bookmark`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${getToken()}` },
-      }).then((d) => d.json());
-      onBookmarkToggle(res.id, r.bookmarked);
+      if (navigator.onLine) {
+        const r = await fetch(`${API_BASE}/api/resources/${res.id}/bookmark`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${getToken()}` },
+        }).then((d) => d.json());
+        onBookmarkToggle(res.id, r.bookmarked);
+      } else {
+        await queueAction({ id: generateId(), type: 'resourceBookmark', payload: { resourceId: res.id }, token: getToken(), priority: 4 });
+        onBookmarkToggle(res.id, !res.bookmarked);
+        toast.info('Bookmark queued');
+      }
     } catch {
       toast.error("Could not toggle bookmark");
     } finally {

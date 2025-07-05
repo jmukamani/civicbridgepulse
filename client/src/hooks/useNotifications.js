@@ -61,7 +61,8 @@ const useNotifications = () => {
     const setupPush = async () => {
       try {
         if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-        const reg = await navigator.serviceWorker.register('/sw.js');
+        const swUrl = import.meta.env.DEV ? '/dev-sw.js?dev-sw' : '/sw.js';
+        const reg = await navigator.serviceWorker.getRegistration(swUrl) || await navigator.serviceWorker.register(swUrl, import.meta.env.DEV ? { type: 'module' } : {});
         const permission = await Notification.requestPermission();
         if (permission !== 'granted') return;
         const existing = await reg.pushManager.getSubscription();

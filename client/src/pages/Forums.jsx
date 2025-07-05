@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { getToken, getUser } from "../utils/auth.js";
 import { toast } from "react-toastify";
 import axios from "axios";
-import useOnlineStatus from "../hooks/useOnlineStatus.js";
 import { queueAction, generateId } from "../utils/db.js";
 
 const API_BASE = "http://localhost:5000";
@@ -54,7 +54,11 @@ const ThreadList = ({ onOpen }) => {
     try {
       const { data } = await axios.get(`${API_BASE}/api/forums/threads`, { headers: { Authorization: `Bearer ${getToken()}` } });
       setThreads(data);
-    } catch {}
+      localStorage.setItem('threads_cache', JSON.stringify(data));
+    } catch {
+      const cached = localStorage.getItem('threads_cache');
+      if (cached) setThreads(JSON.parse(cached));
+    }
   };
   useEffect(() => { fetchThreads(); }, []);
   const onCreated = (t) => setThreads((prev) => [t, ...prev]);
@@ -89,20 +93,25 @@ const ThreadView = ({ id, onBack }) => {
   const [thread, setThread] = useState(null);
   const [content, setContent] = useState("");
   const user = getUser();
-  const online = useOnlineStatus();
   const fetchThread = async () => {
-    if (!online) {
-      toast.info("Thread not available offline");
-      return;
+    try {
+      const { data } = await axios.get(`${API_BASE}/api/forums/threads/${id}`, { headers: { Authorization: `Bearer ${getToken()}` } });
+      setThread(data);
+      localStorage.setItem(`thread_${id}`, JSON.stringify(data));
+    } catch (err) {
+      const cached = localStorage.getItem(`thread_${id}`);
+      if (cached) {
+        setThread(JSON.parse(cached));
+      } else {
+        toast.info("Thread not available offline yet");
+      }
     }
-    const { data } = await axios.get(`${API_BASE}/api/forums/threads/${id}`, { headers: { Authorization: `Bearer ${getToken()}` } });
-    setThread(data);
   };
   useEffect(() => { fetchThread(); }, [id]);
   const submit = async (e) => {
     e.preventDefault();
     try {
-      if (online) {
+      if (navigator.onLine) {
         const { data: post } = await axios.post(
           `${API_BASE}/api/forums/threads/${id}/posts`,
           { content },
@@ -162,8 +171,21 @@ const ThreadView = ({ id, onBack }) => {
 
 const Forums = () => {
   const [openThread, setOpenThread] = useState(null);
+  const location = useLocation();
+
+  // Open thread when hash present
+  useEffect(() => {
+    if (location.hash) {
+      const id = location.hash.slice(1);
+      if (id) setOpenThread(id);
+    }
+  }, [location.hash]);
+
   return openThread ? (
-    <ThreadView id={openThread} onBack={() => setOpenThread(null)} />
+    <ThreadView id={openThread} onBack={() => {
+      setOpenThread(null);
+      window.history.replaceState({}, "", location.pathname); // remove hash
+    }} />
   ) : (
     <ThreadList onOpen={setOpenThread} />
   );

@@ -31,6 +31,14 @@ axios.interceptors.response.use(
           fromCache: true,
         };
       }
+      // No cached copy – gracefully return empty placeholder to avoid runtime crashes
+      return {
+        ...error.response,
+        config,
+        status: 200,
+        data: [],
+        offlinePlaceholder: true,
+      };
     }
     return Promise.reject(error);
   }

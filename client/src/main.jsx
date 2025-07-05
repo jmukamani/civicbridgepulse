@@ -19,6 +19,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(console.error);
+    const swUrl = import.meta.env.DEV ? '/dev-sw.js?dev-sw' : '/sw.js';
+    navigator.serviceWorker.register(swUrl, import.meta.env.DEV ? { type: 'module' } : {}).catch(console.error);
   });
 } 

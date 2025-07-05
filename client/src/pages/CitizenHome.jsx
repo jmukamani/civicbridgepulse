@@ -8,6 +8,13 @@ import ResourceCard from "../components/ResourceCard.jsx";
 
 const API_BASE = "http://localhost:5000";
 
+// Convert snake_case status into "Title Case" with spaces
+const formatStatus = (str) =>
+  str
+    ?.split("_")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+
 const CitizenHome = () => {
   const user = getUser();
   const [issues, setIssues] = useState([]);
@@ -54,6 +61,14 @@ const CitizenHome = () => {
 
   const civicScore = issues.length + polls.length + threads.length;
 
+  // Days until the next upcoming event
+  const nextEventDays = (() => {
+    const upcoming = events.find((ev) => new Date(ev.date) > new Date());
+    if (!upcoming) return null;
+    const diff = Math.ceil((new Date(upcoming.date) - new Date()) / (1000 * 60 * 60 * 24));
+    return diff;
+  })();
+
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold">Welcome, {user?.name}</h2>
@@ -78,7 +93,7 @@ const CitizenHome = () => {
           <ul className="space-y-1 text-sm max-h-32 overflow-auto">
             {issues.map((i) => (
               <li key={i.id}>
-                {i.title} — <span className="italic">{i.status}</span>
+                {i.title} — <span className="italic">{formatStatus(i.status)}</span>
               </li>
             ))}
             {issues.length === 0 && <p>No issues yet.</p>}
@@ -96,7 +111,14 @@ const CitizenHome = () => {
 
       {/* Upcoming Events */}
       <div className="bg-white p-4 rounded shadow">
-        <h3 className="font-semibold mb-2">Upcoming Events</h3>
+        <div className="flex items-baseline justify-between mb-2">
+          <h3 className="font-semibold">Upcoming Events</h3>
+          {nextEventDays !== null && (
+            <p className="flex items-center gap-1 text-yellow-600 text-sm">
+              <span>⏰</span> Next in {nextEventDays} day{nextEventDays === 1 ? "" : "s"}
+            </p>
+          )}
+        </div>
         <ul className="space-y-1 text-sm max-h-40 overflow-auto">
           {events.map((ev) => (
             <li key={ev.id} className="flex items-center gap-2">

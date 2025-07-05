@@ -302,14 +302,19 @@ router.post("/:id/discussion", authenticate("representative"), async (req, res) 
       return res.status(400).json({ message: "Discussion already exists" });
     }
 
-    // Generate summary of results
-    const counts = Array(poll.options.length).fill(0);
-    poll.votes.forEach((v) => v.selected.forEach((idx) => counts[idx]++));
-    const lines = poll.options.map((opt, i) => `- ${opt}: ${counts[i]} votes`).join("\n");
-    const content = `Poll Results for **${poll.question}**\n\n${lines}`;
+    let { title, content } = req.body || {};
+
+    if (!title) title = poll.question;
+    if (!content) {
+      // Generate default summary
+      const counts = Array(poll.options.length).fill(0);
+      poll.votes.forEach((v) => v.selected.forEach((idx) => counts[idx]++));
+      const lines = poll.options.map((opt, i) => `- ${opt}: ${counts[i]} votes`).join("\n");
+      content = `Poll Results for **${poll.question}**\n\n${lines}`;
+    }
 
     const thread = await ForumThread.create({
-      title: poll.question,
+      title,
       createdBy: req.user.id,
       category: "poll_discussion",
     });

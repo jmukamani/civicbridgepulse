@@ -6,6 +6,7 @@ import { Dialog } from "@headlessui/react";
 import axios from "axios";
 import useOnlineStatus from "../hooks/useOnlineStatus.js";
 import { queueAction, generateId } from "../utils/db.js";
+import { useNavigate } from "react-router-dom";
 
 const API_BASE = "http://localhost:5000";
 
@@ -158,7 +159,14 @@ const PollCard = ({ poll, onVote, onEdit, onCreateDiscussion }) => {
           <ActionMenu
             actions={[
               { label: "Edit", onClick: onEdit },
-              { label: "Create Discussion", onClick: onCreateDiscussion },
+              poll.discussionThreadId
+                ? {
+                    label: "View Discussion",
+                    onClick: () => {
+                      onCreateDiscussion(poll, "view");
+                    },
+                  }
+                : { label: "Create Discussion", onClick: onCreateDiscussion },
               {
                 label: "Share",
                 onClick: () => {
@@ -179,7 +187,9 @@ const Polls = () => {
   const [polls, setPolls] = useState([]);
   const user = getUser();
   const [editPoll, setEditPoll] = useState(null);
+  const [discussionModal, setDiscussionModal] = useState(null);
   const online = useOnlineStatus();
+  const navigate = useNavigate();
 
   const fetchPolls = async () => {
     try {
@@ -252,16 +262,38 @@ const Polls = () => {
     }
   };
 
-  const createDiscussion = async (poll) => {
+  const createDiscussion = async (poll, mode = "create") => {
+    const threadId = poll.discussionThreadId;
+    if (mode === "view" && threadId) {
+      navigate(`/dashboard/forums#${threadId}`);
+      return;
+    }
+
+    // Open modal for editing
+    // Prepare default summary content
+    const lines = poll.options
+      .map((opt, i) => `- ${opt}: ${poll.votesCount?.[i] ?? 0} votes`)
+      .join("\n");
+    const defaultContent = `Poll Results for **${poll.question}**\n\n${lines}`;
+    setDiscussionModal({ poll, title: poll.question, content: defaultContent });
+  };
+
+  const submitDiscussion = async () => {
+    const { poll, title, content } = discussionModal;
     try {
       const res = await fetch(`${API_BASE}/api/polls/${poll.id}/discussion`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${getToken()}` },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({ title, content }),
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) throw new Error("Failed");
+      const thread = await res.json();
       toast.success("Discussion created");
-    } catch {
-      toast.error("Could not create discussion");
+      setPolls((prev) => prev.map((p) => (p.id === poll.id ? { ...p, discussionThreadId: thread.id } : p)));
+      setDiscussionModal(null);
+      navigate(`/dashboard/forums#${thread.id}`);
+    } catch (err) {
+      toast.error(err.message || "Could not create discussion");
     }
   };
 
@@ -318,6 +350,37 @@ const Polls = () => {
       )}
 
       {user.role === "representative" && <PollForm onCreated={onCreated} />}
+
+      {/* Discussion Modal */}
+      {discussionModal && (
+        <Dialog open={true} onClose={() => setDiscussionModal(null)} className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen p-4">
+            <Dialog.Overlay className="fixed inset-0 bg-black opacity-50" />
+            <div className="bg-white max-w-lg w-full p-6 rounded shadow-lg relative z-10 space-y-3">
+              <h3 className="text-lg font-semibold">Create Discussion</h3>
+              <input
+                className="border w-full px-3 py-2 rounded"
+                value={discussionModal.title}
+                onChange={(e) => setDiscussionModal({ ...discussionModal, title: e.target.value })}
+              />
+              <textarea
+                rows="6"
+                className="border w-full px-3 py-2 rounded whitespace-pre-wrap font-mono text-sm"
+                value={discussionModal.content}
+                onChange={(e) => setDiscussionModal({ ...discussionModal, content: e.target.value })}
+              />
+              <div className="flex justify-end gap-2">
+                <button className="px-4 py-2 bg-gray-200 rounded" onClick={() => setDiscussionModal(null)}>
+                  Cancel
+                </button>
+                <button className="px-4 py-2 bg-indigo-600 text-white rounded" onClick={submitDiscussion}>
+                  Post Discussion
+                </button>
+              </div>
+            </div>
+          </div>
+        </Dialog>
+      )}
     </div>
   );
 };

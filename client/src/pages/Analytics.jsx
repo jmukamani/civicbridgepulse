@@ -3,6 +3,7 @@ import { getToken } from "../utils/auth.js";
 import axios from "axios";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { toast } from "react-toastify";
+import ActionMenu from "../components/ActionMenu.jsx";
 
 const API_BASE = "http://localhost:5000";
 
@@ -70,16 +71,46 @@ const Analytics = () => {
 
   const COLORS = ["#10b981", "#fbbf24", "#ef4444"];
 
+  // Produce compact label: up to 3 significant words (excluding common stop-words)
+  const stopWords = new Set(["the","a","an","of","in","on","for","to","and","or","by","with","at","from","is","are","as","that"]);
+  const compactLabel = (sentence) => {
+    if (!sentence) return "";
+    const words = sentence.split(/\s+/).filter((w) => w && !stopWords.has(w.toLowerCase()));
+    const selected = words.slice(0, 3).join(" ");
+    return selected + (words.length > 3 ? "…" : "");
+  };
+
+  // Combined export handler
+  const downloadAll = () => {
+    downloadCSV();
+    if (pollData.length) downloadPollCSV();
+    if (issueData) downloadIssueCSV();
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Policy Engagement Analytics</h2>
-        <button onClick={downloadCSV} className="bg-indigo-600 text-white px-3 py-1 rounded text-sm">Export CSV</button>
+        <ActionMenu
+          buttonClass="bg-indigo-600 text-white"
+          actions={[
+            { label: "Export All CSVs", onClick: downloadAll },
+            { label: "Export Policy CSV", onClick: downloadCSV },
+            { label: "Export Polls CSV", onClick: downloadPollCSV },
+            { label: "Export Issues CSV", onClick: downloadIssueCSV },
+          ]}
+        />
       </div>
       {data.length ? (
         <ResponsiveContainer width="100%" height={400}>
           <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 80 }}>
-            <XAxis dataKey="title" angle={-45} textAnchor="end" interval={0} height={80} />
+            <XAxis
+              dataKey="title"
+              tick={false}
+              axisLine={true}
+              tickLine={false}
+              height={10}
+            />
             <YAxis />
             <Tooltip />
             <Legend />
@@ -96,11 +127,16 @@ const Analytics = () => {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold">Poll Participation</h2>
-            <button onClick={downloadPollCSV} className="bg-indigo-600 text-white px-3 py-1 rounded text-sm">Export CSV</button>
           </div>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={pollData.map(p => ({ question: p.question, votes: p.totalVotes }))} margin={{ top: 20, right: 30, left: 20, bottom: 80 }}>
-              <XAxis dataKey="question" angle={-45} textAnchor="end" interval={0} height={80} />
+              <XAxis
+                dataKey="question"
+                tick={false}
+                axisLine={true}
+                tickLine={false}
+                height={10}
+              />
               <YAxis />
               <Tooltip />
               <Bar dataKey="votes" fill="#6366f1" />
@@ -114,7 +150,6 @@ const Analytics = () => {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold">Issue Status Breakdown</h2>
-            <button onClick={downloadIssueCSV} className="bg-indigo-600 text-white px-3 py-1 rounded text-sm">Export CSV</button>
           </div>
           <ResponsiveContainer width="100%" height={250}>
             <PieChart>

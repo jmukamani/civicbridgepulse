@@ -6,6 +6,19 @@ import { Dialog } from "@headlessui/react";
 import ActionMenu from "../components/ActionMenu.jsx";
 import { useNavigate } from "react-router-dom";
 
+const categoryColors = {
+  budget: "bg-green-100 text-green-800",
+  development: "bg-blue-100 text-blue-800",
+  bylaw: "bg-purple-100 text-purple-800",
+  other: "bg-gray-100 text-gray-800",
+};
+
+const statusColors = {
+  published: "bg-emerald-100 text-emerald-800",
+  draft: "bg-yellow-100 text-yellow-800",
+  review: "bg-orange-100 text-orange-800",
+};
+
 const PolicyManagement = () => {
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("budget");
@@ -125,8 +138,16 @@ const PolicyManagement = () => {
                 <tr key={d.id} className="border-t hover:bg-gray-50">
                   <td className="px-3 py-2"><input type="checkbox" checked={selectedIds.includes(d.id)} onChange={()=>toggleSelect(d.id)} /></td>
                   <td className="px-3 py-2">{d.title}</td>
-                  <td className="px-3 py-2">{d.category}</td>
-                  <td className="px-3 py-2 capitalize">{d.status}</td>
+                  <td className="px-3 py-2">
+                    <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${categoryColors[d.category] || "bg-gray-100"}`}>
+                      {d.category.replace(/_/g, " ")}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2 capitalize">
+                    <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${statusColors[d.status] || "bg-gray-100"}`}>
+                      {d.status}
+                    </span>
+                  </td>
                   <td className="px-3 py-2">{new Date(d.createdAt).toLocaleDateString()}</td>
                   <td className="px-3 py-2">
                     <ActionMenu

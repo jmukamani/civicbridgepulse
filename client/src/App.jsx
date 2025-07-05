@@ -7,6 +7,7 @@ import Landing from "./pages/Landing.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import VerifyEmail from "./components/VerifyEmail.jsx";
 import useOnlineStatus from "./hooks/useOnlineStatus.js";
+import useLocalSync from "./hooks/useLocalSync.js";
 import { useEffect } from "react";
 import { toast } from "react-toastify";
 
@@ -15,6 +16,7 @@ const App = () => {
   const location = useLocation();
   const onLanding = location.pathname === "/";
   const online = useOnlineStatus();
+  useLocalSync();
 
   useEffect(() => {
     if (online) {

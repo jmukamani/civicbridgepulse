@@ -2,10 +2,12 @@ import { BellIcon } from "@heroicons/react/24/outline";
 import { useState } from "react";
 import useNotifications from "../hooks/useNotifications.js";
 import { formatDateTime } from "../utils/datetime.js";
+import { useNavigate } from "react-router-dom";
 
 const NotificationBell = () => {
   const { notifications, unreadCount, markRead, loadMore } = useNotifications();
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
 
   const toggle = () => setOpen((v) => !v);
 
@@ -32,7 +34,21 @@ const NotificationBell = () => {
           </div>
           <ul className="max-h-80 overflow-auto divide-y">
             {notifications.map((n) => (
-              <li key={n.id} className={`px-3 py-2 text-sm ${n.read ? "bg-white" : "bg-indigo-50"}`}>
+              <li
+                key={n.id}
+                className={`px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 ${n.read ? "bg-white" : "bg-indigo-50"}`}
+                onClick={() => {
+                  let target = null;
+                  if (n.type === "message" && n.data?.senderId) {
+                    target = `/dashboard/messages/${n.data.senderId}`;
+                  } else if ((n.type === "issue_status" || n.type === "issue") && n.data?.issueId) {
+                    target = `/dashboard/issues#${n.data.issueId}`;
+                  }
+                  if (target) navigate(target);
+                  markRead([n.id]);
+                  setOpen(false);
+                }}
+              >
                 <p className="font-medium">{n.title}</p>
                 <p className="text-xs text-gray-600 line-clamp-2">{n.body}</p>
                 <p className="text-[10px] text-gray-400 mt-0.5">{formatDateTime(n.createdAt)}</p>

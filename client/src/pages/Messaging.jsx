@@ -7,6 +7,7 @@ import RatingButton from "../components/RatingButton.jsx";
 import { notifySuccess, notifyError } from "../utils/notifications.js";
 import useOnlineStatus from "../hooks/useOnlineStatus.js";
 import { queueAction, generateId } from "../utils/db.js";
+import { addLocalMessage } from "../utils/localDB.js";
 
 const Messaging = () => {
   const { userId: otherId } = useParams();
@@ -90,12 +91,12 @@ const Messaging = () => {
         notifyError(err.response?.data?.message || "Send failed");
       }
     } else {
-      // queue
-      await queueAction({ id: generateId(), type: "message", payload: msgPayload, token: getToken() });
-      // optimistic UI
+      // save locally to dexie and queue for sync
+      const localId = await addLocalMessage({ threadId: null, repId: null, userId: user.id, ...msgPayload });
+      await queueAction({ id: generateId(), type: "message", payload: msgPayload, token: getToken(), localId });
       setMessages((prev) => [
         ...prev,
-        { id: generateId(), ...msgPayload, senderId: getUser().id, recipientId: otherId, createdAt: new Date().toISOString(), read: false },
+        { id: `local-${localId}`, ...msgPayload, senderId: user.id, recipientId: otherId, createdAt: new Date().toISOString(), read: false },
       ]);
       notifySuccess("Message queued (offline)");
     }

@@ -12,16 +12,27 @@ const PolicyList = () => {
   const [category, setCategory] = useState("");
   const user = getUser();
 
-  useEffect(() => {
-    const fetch = async () => {
+  const fetch = async () => {
+    try {
       const res = await axios.get("http://localhost:5000/api/policies", {
         params: { q: search, category },
         headers: { Authorization: `Bearer ${getToken()}` },
       });
       setDocs(res.data);
-    };
-    fetch();
-  }, [search, category]);
+      // Persist for offline usage
+      localStorage.setItem("policies_cache", JSON.stringify(res.data));
+    } catch (err) {
+      // Offline fallback
+      const cached = localStorage.getItem("policies_cache");
+      if (cached) {
+        setDocs(JSON.parse(cached));
+      } else {
+        console.error(err);
+      }
+    }
+  };
+
+  useEffect(() => { fetch(); }, [search, category]);
 
   // Helper to color tags
   const tagClasses = (type, val) => {
@@ -129,16 +140,37 @@ const PolicyViewer = () => {
   const [lang, setLang] = useState('en');
 
   useEffect(() => {
-    const fetch = async () => {
-      const res = await axios.get(`http://localhost:5000/api/policies/${id}`, {
-        headers: { Authorization: `Bearer ${getToken()}` },
-      });
-      setDoc(res.data);
+    const fetchDoc = async () => {
+      try {
+        const res = await axios.get(`http://localhost:5000/api/policies/${id}`, {
+          headers: { Authorization: `Bearer ${getToken()}` },
+        });
+        setDoc(res.data);
+        // store for offline
+        const saved = JSON.parse(localStorage.getItem("policies_cache")) || [];
+        const exists = saved.find((d) => d.id === res.data.id);
+        if (!exists) {
+          localStorage.setItem("policies_cache", JSON.stringify([...saved, res.data]));
+        }
+      } catch (err) {
+        // offline: look in localStorage
+        const cached = JSON.parse(localStorage.getItem("policies_cache")) || [];
+        const found = cached.find((d) => d.id === id);
+        if (found) setDoc(found);
+        else console.error(err);
+      }
     };
-    fetch();
+    fetchDoc();
   }, [id]);
 
-  if (!doc) return <p>Loading...</p>;
+  if (!doc || !doc.filePath) {
+    return (
+      <div className="space-y-4">
+        <button onClick={() => navigate(-1)} className="text-indigo-600">← Back</button>
+        <p className="text-gray-600">Document not available offline.</p>
+      </div>
+    );
+  }
 
   return (
     <div>

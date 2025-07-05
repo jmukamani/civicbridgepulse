@@ -63,8 +63,20 @@ const RepresentativeHome = () => {
           })
         );
         setPolls(dets);
+
+        const snapshot = { issues: issRes.data, threads: threadRes.data, policies: policyRes.data, events: evSorted, polls: dets, resources: resourcesRes.data };
+        localStorage.setItem('rep_dash_cache', JSON.stringify(snapshot));
       } catch (err) {
-        console.error(err);
+        const cached = localStorage.getItem('rep_dash_cache');
+        if (cached) {
+          const snap = JSON.parse(cached);
+          setIssues(snap.issues||[]);
+          setThreads(snap.threads||[]);
+          setPolicies(snap.policies||[]);
+          setEvents(snap.events||[]);
+          setPolls(snap.polls||[]);
+          setRecentResources(snap.resources||[]);
+        }
       }
     };
     load();
@@ -125,7 +137,18 @@ const RepresentativeHome = () => {
           title="Scheduled Events"
           value={events.length}
           icon={<span>📅</span>}
-          note={events.length ? `next: ${formatDateTime(events[0].date)}` : "none"}
+          note={events.length ? (
+            (() => {
+              const diffDays = Math.ceil((new Date(events[0].date) - new Date()) / (1000 * 60 * 60 * 24));
+              return (
+                <span className="flex items-center gap-1 text-yellow-600">
+                  <span>⏰</span> Next in {diffDays} day{diffDays === 1 ? "" : "s"}
+                </span>
+              );
+            })()
+          ) : (
+            "none"
+          )}
         />
         <StatCard
           title="Budget Allocation"

@@ -31,6 +31,17 @@ const statusColors = {
   closed: "bg-gray-100 text-gray-800",
 };
 
+// Helper to turn status value into nicely formatted label
+const getStatusLabel = (value) => {
+  const found = STATUS_OPTIONS.find((s) => s.value === value);
+  if (found) return found.label;
+  // Fallback: convert snake_case to Title Case
+  return value
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+};
+
 const Issues = () => {
   const [issues, setIssues] = useState([]);
   const [filters, setFilters] = useState({ status: "", category: "", priority: "", q: "" });
@@ -46,9 +57,13 @@ const Issues = () => {
         headers: { Authorization: `Bearer ${getToken()}` },
       });
       setIssues(res.data);
+      // cache
+      localStorage.setItem('issues_cache', JSON.stringify(res.data));
     } catch (err) {
-      console.error(err);
-      toast.error("Could not load issues");
+      const cached = localStorage.getItem('issues_cache');
+      if (cached) {
+        setIssues(JSON.parse(cached));
+      }
     }
   };
 
@@ -118,17 +133,21 @@ const Issues = () => {
   };
 
   const openTimeline = async (issue) => {
-    if (!online) {
-      toast.info("Timeline not available offline");
-      return;
-    }
     try {
       const { data } = await axios.get(`${API_BASE}/api/issues/${issue.id}/history`, {
         headers: { Authorization: `Bearer ${getToken()}` },
       });
       setTimelineIssue({ ...issue, history: data });
+      // cache for offline
+      localStorage.setItem(`issue_hist_${issue.id}`, JSON.stringify(data));
     } catch (err) {
-      toast.error("Could not load timeline");
+      // offline fallback
+      const cached = localStorage.getItem(`issue_hist_${issue.id}`);
+      if (cached) {
+        setTimelineIssue({ ...issue, history: JSON.parse(cached) });
+      } else {
+        toast.info("Timeline not available offline yet");
+      }
     }
   };
 
@@ -184,7 +203,7 @@ const Issues = () => {
                       statusColors[issue.status] || "bg-gray-100"
                     }`}
                   >
-                    {issue.status}
+                    {getStatusLabel(issue.status)}
                   </span>
                 </td>
                 <td className="px-4 py-2 text-xs">{issue.location || "-"}</td>
@@ -237,7 +256,7 @@ const Issues = () => {
                     <span className="w-2 h-2 mt-2 rounded-full bg-indigo-600" />
                     <div>
                       <p>
-                        <strong className="capitalize">{h.status.replace(/_/g, " ")}</strong>
+                        <strong>{getStatusLabel(h.status)}</strong>
                         {h.note && <span> – {h.note}</span>}
                       </p>
                       <p className="text-xs text-gray-500">{new Date(h.createdAt).toLocaleString()}</p>

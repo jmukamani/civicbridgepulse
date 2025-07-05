@@ -30,7 +30,10 @@
     "lodash.debounce": "^4.0.8",
     "recharts": "^2.5.0",
     "socket.io-client": "^4.7.4",
-    "date-fns": "^2.1.0"
+    "date-fns": "^2.1.0",
+    "dexie": "^3.2.5",
+    "lz-string": "^1.4.4",
+    "flexsearch": "^0.7.31"
   },
   "devDependencies": {
     "@babel/preset-react": "^7.27.1",
@@ -48,6 +51,11 @@
     "postcss": "^8.4.27",
     "tailwindcss": "^3.3.4",
     "vite": "^5.0.0",
-    "whatwg-fetch": "^3.6.20"
+    "whatwg-fetch": "^3.6.20",
+    "vite-plugin-pwa": "^0.18.0",
+    "workbox-precaching": "^6.5.4",
+    "workbox-routing": "^6.5.4",
+    "workbox-strategies": "^6.5.4",
+    "workbox-expiration": "^6.5.4"
   }
 }

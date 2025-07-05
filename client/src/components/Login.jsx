@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
-import { setToken } from "../utils/auth.js";
+import { setToken, getToken } from "../utils/auth.js";
 import { useTranslation } from "react-i18next";
 
 const Login = () => {
@@ -13,6 +13,15 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!navigator.onLine) {
+      const existing = getToken();
+      if (existing) {
+        navigate("/dashboard");
+      } else {
+        setError("Offline: cannot authenticate");
+      }
+      return;
+    }
     try {
       const res = await axios.post("http://localhost:5000/api/auth/login", {
         email,
@@ -24,6 +33,11 @@ const Login = () => {
       setError(err.response?.data?.message || "Login failed");
     }
   };
+
+  // if token exists already, auto redirect even offline
+  if (getToken()) {
+    navigate("/dashboard");
+  }
 
   return (
     <div className="flex items-center justify-center h-screen">

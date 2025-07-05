@@ -26,8 +26,18 @@ const Resources = () => {
       // derive categories
       const cats = Array.from(new Set(list.map((r) => r.category).filter(Boolean)));
       setCategories(cats);
+      // store cache
+      localStorage.setItem('resources_cache', JSON.stringify(list));
     } catch (err) {
-      toast.error("Could not load resources");
+      const cached = localStorage.getItem('resources_cache');
+      if (cached) {
+        const list = JSON.parse(cached);
+        setResources(list);
+        const cats = Array.from(new Set(list.map((r) => r.category).filter(Boolean)));
+        setCategories(cats);
+      } else {
+        toast.info('Resources not available offline yet');
+      }
     }
   };
 
