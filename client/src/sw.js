@@ -20,7 +20,10 @@ registerRoute(
 
 // Runtime caching for API calls (network-first)
 registerRoute(
-  ({ url, request }) => url.origin === self.location.origin && url.pathname.startsWith('/api/') && request.method === 'GET',
+  ({ url, request }) =>
+    url.origin === self.location.origin &&
+    url.pathname.startsWith('/api/') &&
+    request.method === 'GET',
   new NetworkFirst({
     cacheName: 'api-cache',
     networkTimeoutSeconds: 10,
@@ -50,6 +53,23 @@ registerRoute(
       new ExpirationPlugin({ maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 365 }),
     ],
   }),
+);
+
+// cache policy metadata + comments for 7 days, fail over to cache after 3 s
+registerRoute(
+  ({url}) =>
+    url.pathname.startsWith('/api/policies/') &&
+    url.method === 'GET',
+  new NetworkFirst({
+    cacheName: 'policy-api',
+    networkTimeoutSeconds: 3,
+    plugins: [
+      new ExpirationPlugin({
+        maxEntries: 50,
+        maxAgeSeconds: 7 * 24 * 60 * 60
+      })
+    ]
+  })
 );
 
 // Constants for priority + retry
