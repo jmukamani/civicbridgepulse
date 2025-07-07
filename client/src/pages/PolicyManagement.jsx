@@ -52,7 +52,7 @@ const PolicyManagement = () => {
     if (summarySw) fd.append("summary_sw", summarySw);
     if (budgetText) fd.append("budget", budgetText);
     try {
-      await axios.post(`${API_BASE}/api/policies/upload`, fd, {
+      const res = await axios.post(`${API_BASE}/api/policies/upload`, fd, {
         headers: { Authorization: `Bearer ${getToken()}` },
       });
       setTitle("");
@@ -62,6 +62,17 @@ const PolicyManagement = () => {
       setError("");
       setBudgetText("");
       fetchDocs();
+      toast.success("Uploaded");
+
+      // Cache the uploaded file for offline access
+      if ('serviceWorker' in navigator && 'caches' in window) {
+        try {
+          const cache = await caches.open('policy-files');
+          await cache.add(`${API_BASE}/${res.data.filePath}`);
+        } catch (err) {
+          console.warn('Could not cache file', err);
+        }
+      }
     } catch (err) {
       setError(err.response?.data?.message || "Upload failed");
     }
