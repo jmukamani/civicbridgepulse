@@ -20,6 +20,7 @@ const PolicyList = () => {
         headers: { Authorization: `Bearer ${getToken()}` },
       });
       setDocs(res.data);
+      prefetchFiles(res.data);
       // Persist for offline usage
       localStorage.setItem("policies_cache", JSON.stringify(res.data));
     } catch (err) {
@@ -264,6 +265,13 @@ const Comments = ({ policyId }) => {
       </ul>
     </div>
   );
+};
+
+// helper to cache files
+const prefetchFiles = async (docs) => {
+  if (!('caches' in window)) return;
+  const cache = await caches.open('policy-files');
+  await Promise.all(docs.map(d => cache.add(`${API_BASE}/${d.filePath}`)));
 };
 
 // ---- Router wrapper ----
