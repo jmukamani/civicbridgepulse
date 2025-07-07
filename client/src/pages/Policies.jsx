@@ -244,8 +244,34 @@ const Comments = ({ policyId }) => {
   };
 
   return (
-    <div>
-      {/* Comment form */}
+    <div className="space-y-4 mt-4">
+      <form onSubmit={postComment} className="flex gap-2">
+        <input
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          placeholder="Add a comment"
+          className="border flex-1 px-2 py-1"
+          required
+        />
+        <button className="bg-indigo-600 text-white px-4 rounded">Post</button>
+      </form>
+      <ul className="space-y-2 text-sm">
+        {comments.map((c) => (
+          <li key={c.id} className="border p-2 rounded">
+            {c.content}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 };
+
+// ---- Router wrapper ----
+const Policies = () => (
+  <Routes>
+    <Route index element={<PolicyList />} />
+    <Route path="view/:id" element={<PolicyViewer />} />
+  </Routes>
+);
+
+export default Policies;
