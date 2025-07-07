@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { io } from "socket.io-client";
 import { getToken, getUser } from "../utils/auth.js";
 import { notifyInfo } from "../utils/notifications.js";
+import { API_BASE } from "../utils/network.js";
 
 const useSocket = () => {
   const socketRef = useRef(null);
@@ -14,9 +15,9 @@ const useSocket = () => {
 
     const connect = () => {
       if (socket || !navigator.onLine) return;
-      socket = io("http://localhost:5000", {
+      socket = io(API_BASE, {
         auth: { token: getToken() },
-        reconnection: false, // we will handle reconnection manually
+        reconnection: false,
         transports: ["websocket", "polling"],
       });
       socket.emit("join", user.id);
