@@ -17,6 +17,8 @@ import notificationsRoutes from "./routes/notifications.js";
 import swaggerUi from "swagger-ui-express";
 import swaggerSpec from "./swagger.js";
 import eventsRoutes from "./routes/events.js";
+import path from "path";
+import { fileURLToPath } from "url";
 
 dotenv.config();
 
@@ -53,6 +55,15 @@ app.get("/api/docs.json", (req, res) => res.json(swaggerSpec));
 
 // static serve uploads
 app.use("/uploads", express.static("uploads"));
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const buildPath = path.join(__dirname, "public");
+app.use(express.static(buildPath));
+
+app.get(/^((?!^\/api).)*$/, (req, res) => {
+  res.sendFile(path.join(buildPath, "index.html"));
+});
 
 const PORT = process.env.PORT || 5000;
 
@@ -100,7 +111,6 @@ const PORT = process.env.PORT || 5000;
       });
     });
 
-    // export io to use in routes (quick way)
     app.set("io", io);
   } catch (err) {
     console.error("Unable to connect to DB", err);
