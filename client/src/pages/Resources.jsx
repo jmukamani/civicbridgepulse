@@ -4,8 +4,7 @@ import ResourceCard from "../components/ResourceCard.jsx";
 import { getToken, getUser } from "../utils/auth.js";
 import { toast } from "react-toastify";
 import { Dialog } from "@headlessui/react";
-
-const API_BASE = "http://localhost:5000";
+import { API_BASE } from "../utils/network.js";
 
 const Resources = () => {
   const [resources, setResources] = useState([]);

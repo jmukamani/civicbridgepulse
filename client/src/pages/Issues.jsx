@@ -8,8 +8,7 @@ import debounce from "lodash.debounce";
 import useSocket from "../hooks/useSocket.js";
 import axios from "axios";
 import useOnlineStatus from "../hooks/useOnlineStatus.js";
-
-const API_BASE = "http://localhost:5000";
+import { API_BASE } from "../utils/network.js";
 
 const STATUS_OPTIONS = [
   { value: "reported", label: "Reported" },

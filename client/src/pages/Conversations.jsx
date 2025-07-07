@@ -3,6 +3,7 @@ import axios from "axios";
 import { getToken, getUser } from "../utils/auth.js";
 import { Link, useNavigate } from "react-router-dom";
 import SelectRecipient from "../components/SelectRecipient.jsx";
+import { API_BASE } from "../utils/network.js";
 
 const Conversations = () => {
   const [threads, setThreads] = useState([]);
@@ -11,7 +12,7 @@ const Conversations = () => {
 
   useEffect(() => {
     const fetchThreads = async () => {
-      const res = await axios.get("http://localhost:5000/api/messages/threads", {
+      const res = await axios.get(`${API_BASE}/api/messages/threads`, {
         headers: { Authorization: `Bearer ${getToken()}` },
       });
       setThreads(res.data);

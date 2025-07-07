@@ -7,8 +7,7 @@ import axios from "axios";
 import useOnlineStatus from "../hooks/useOnlineStatus.js";
 import { queueAction, generateId } from "../utils/db.js";
 import { useNavigate } from "react-router-dom";
-
-const API_BASE = "http://localhost:5000";
+import { API_BASE } from "../utils/network.js";
 
 const defaultPoll = { question: "", options: ["", ""], multiple: false, opensAt: "", closesAt: "" };
 

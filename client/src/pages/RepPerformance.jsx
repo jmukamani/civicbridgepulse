@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { getToken, getUser } from "../utils/auth.js";
 import { toast } from "react-toastify";
-
-const API_BASE = "http://localhost:5000";
+import { API_BASE } from "../utils/network.js";
 
 const RepPerformance = () => {
   const rep = getUser();

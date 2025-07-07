@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useTranslation } from "react-i18next";
+import { API_BASE } from "../utils/network.js";
 
 const Register = () => {
   const [form, setForm] = useState({ name: "", email: "", password: "", role: "citizen", county: "" });
@@ -17,7 +18,7 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post("http://localhost:5000/api/auth/register", form);
+      await axios.post(`${API_BASE}/api/auth/register`, form);
       setSuccess("Registration successful. Check email to verify.");
       setError(null);
       setTimeout(() => navigate("/login"), 2000);

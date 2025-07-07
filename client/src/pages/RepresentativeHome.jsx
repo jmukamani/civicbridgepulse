@@ -8,8 +8,7 @@ import { toast } from "react-toastify";
 import ActionMenu from "../components/ActionMenu.jsx";
 import ResourceCard from "../components/ResourceCard.jsx";
 import CountdownTimer from "../components/CountdownTimer.jsx";
-
-const API_BASE = "http://localhost:5000";
+import { API_BASE } from "../utils/network.js";
 
 const StatCard = ({ title, value, icon, note }) => (
   <div className="bg-white p-6 rounded-lg shadow flex items-center gap-4">

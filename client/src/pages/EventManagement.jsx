@@ -6,8 +6,7 @@ import { toast } from "react-toastify";
 import { formatDateTime } from "../utils/datetime.js";
 import CountdownTimer from "../components/CountdownTimer.jsx";
 import ActionMenu from "../components/ActionMenu.jsx";
-
-const API_BASE = "http://localhost:5000";
+import { API_BASE } from "../utils/network.js";
 
 const EventManagement = () => {
   const [events, setEvents] = useState([]);

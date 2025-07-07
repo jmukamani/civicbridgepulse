@@ -5,6 +5,7 @@ import { Link, Routes, Route, useNavigate, useLocation } from "react-router-dom"
 import BudgetChart from "../components/BudgetChart.jsx";
 import { toast } from "react-toastify";
 import { formatDistanceToNow } from "date-fns";
+import { API_BASE } from "../utils/network.js";
 
 const PolicyList = () => {
   const [docs, setDocs] = useState([]);
@@ -14,7 +15,7 @@ const PolicyList = () => {
 
   const fetch = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/policies", {
+      const res = await axios.get(`${API_BASE}/api/policies`, {
         params: { q: search, category },
         headers: { Authorization: `Bearer ${getToken()}` },
       });
@@ -142,7 +143,7 @@ const PolicyViewer = () => {
   useEffect(() => {
     const fetchDoc = async () => {
       try {
-        const res = await axios.get(`http://localhost:5000/api/policies/${id}`, {
+        const res = await axios.get(`${API_BASE}/api/policies/${id}`, {
           headers: { Authorization: `Bearer ${getToken()}` },
         });
         setDoc(res.data);
@@ -190,7 +191,7 @@ const PolicyViewer = () => {
       )}
       {doc.filePath.toLowerCase().endsWith(".pdf") ? (
         <embed
-          src={`http://localhost:5000/${doc.filePath}`}
+          src={`${API_BASE}/${doc.filePath}`}
           type="application/pdf"
           className="w-full h-[80vh] border"
         />
@@ -198,7 +199,7 @@ const PolicyViewer = () => {
         <iframe
           title="doc-viewer"
           className="w-full h-[80vh] border"
-          src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(`http://localhost:5000/${doc.filePath}`)}`}
+          src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(`${API_BASE}/${doc.filePath}`)}`}
         />
       )}
 
@@ -215,7 +216,7 @@ const Comments = ({ policyId }) => {
 
   const fetchComments = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/policies/${policyId}/comments`, {
+      const res = await axios.get(`${API_BASE}/api/policies/${policyId}/comments`, {
         headers: { Authorization: `Bearer ${getToken()}` },
       });
       setComments(res.data);
@@ -232,49 +233,19 @@ const Comments = ({ policyId }) => {
     e.preventDefault();
     try {
       const res = await axios.post(
-        `http://localhost:5000/api/policies/${policyId}/comments`,
+        `${API_BASE}/api/policies/${policyId}/comments`,
         { content },
         { headers: { Authorization: `Bearer ${getToken()}` } }
       );
-      setComments((prev) => [...prev, res.data]);
-      setContent("");
+      setComments(res.data);
     } catch (err) {
-      toast.error("Could not comment");
+      console.error(err);
     }
   };
 
   return (
-    <div className="mt-8">
-      <h3 className="font-semibold mb-2">Comments</h3>
-      <ul className="space-y-2 mb-4">
-        {comments.map((c) => (
-          <li key={c.id} className="border p-2 rounded text-sm">
-            {c.content}
-          </li>
-        ))}
-        {comments.length === 0 && <p className="text-sm text-gray-500">No comments yet.</p>}
-      </ul>
-      {user && (
-        <form onSubmit={postComment} className="flex gap-2">
-          <input
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder="Add a comment"
-            className="border flex-1 px-2 py-1"
-            required
-          />
-          <button className="bg-indigo-600 text-white px-4 rounded">Post</button>
-        </form>
-      )}
+    <div>
+      {/* Comment form */}
     </div>
   );
 };
-
-const Policies = () => (
-  <Routes>
-    <Route index element={<PolicyList />} />
-    <Route path="view/:id" element={<PolicyViewer />} />
-  </Routes>
-);
-
-export default Policies;

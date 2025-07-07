@@ -4,8 +4,7 @@ import { toast } from "react-toastify";
 import useOnlineStatus from "../hooks/useOnlineStatus.js";
 import { queueAction, generateId } from "../utils/db.js";
 import useQueueSync from "../hooks/useQueueSync.js";
-
-const API_BASE = "http://localhost:5000";
+import { API_BASE } from "../utils/network.js";
 
 const defaultForm = {
   title: "",

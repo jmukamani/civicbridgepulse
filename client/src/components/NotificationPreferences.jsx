@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { getToken } from "../utils/auth.js";
-
-const API_BASE = "http://localhost:5000";
+import { API_BASE } from "../utils/network.js";
 
 const NotificationPreferences = () => {
   const [pref, setPref] = useState({ inApp: true, push: true, email: false });

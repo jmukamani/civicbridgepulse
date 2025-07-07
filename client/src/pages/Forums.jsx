@@ -4,8 +4,7 @@ import { getToken, getUser } from "../utils/auth.js";
 import { toast } from "react-toastify";
 import axios from "axios";
 import { queueAction, generateId } from "../utils/db.js";
-
-const API_BASE = "http://localhost:5000";
+import { API_BASE } from "../utils/network.js";
 
 const NewThreadForm = ({ onCreated }) => {
   const [title, setTitle] = useState("");

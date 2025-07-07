@@ -4,8 +4,7 @@ import axios from "axios";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { toast } from "react-toastify";
 import ActionMenu from "../components/ActionMenu.jsx";
-
-const API_BASE = "http://localhost:5000";
+import { API_BASE } from "../utils/network.js";
 
 const Analytics = () => {
   const [data, setData] = useState([]);

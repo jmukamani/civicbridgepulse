@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { getToken } from "../utils/auth.js";
+import { API_BASE } from "../utils/network.js";
 
 const SelectRecipient = ({ onSelect, onClose }) => {
   const [search, setSearch] = useState("");
@@ -8,7 +9,7 @@ const SelectRecipient = ({ onSelect, onClose }) => {
 
   useEffect(() => {
     const fetch = async () => {
-      const res = await axios.get("http://localhost:5000/api/users", {
+      const res = await axios.get(`${API_BASE}/api/users`, {
         params: { q: search },
         headers: { Authorization: `Bearer ${getToken()}` },
       });

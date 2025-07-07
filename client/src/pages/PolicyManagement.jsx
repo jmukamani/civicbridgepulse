@@ -5,6 +5,7 @@ import { toast } from "react-toastify";
 import { Dialog } from "@headlessui/react";
 import ActionMenu from "../components/ActionMenu.jsx";
 import { useNavigate } from "react-router-dom";
+import { API_BASE } from "../utils/network.js";
 
 const categoryColors = {
   budget: "bg-green-100 text-green-800",
@@ -34,7 +35,7 @@ const PolicyManagement = () => {
   const navigate = useNavigate();
 
   const fetchDocs = async () => {
-    const res = await axios.get("http://localhost:5000/api/policies", {
+    const res = await axios.get(`${API_BASE}/api/policies`, {
       headers: { Authorization: `Bearer ${getToken()}` },
     });
     setDocs(res.data);
@@ -51,7 +52,7 @@ const PolicyManagement = () => {
     if (summarySw) fd.append("summary_sw", summarySw);
     if (budgetText) fd.append("budget", budgetText);
     try {
-      await axios.post("http://localhost:5000/api/policies/upload", fd, {
+      await axios.post(`${API_BASE}/api/policies/upload`, fd, {
         headers: { Authorization: `Bearer ${getToken()}` },
       });
       setTitle("");
@@ -75,7 +76,7 @@ const PolicyManagement = () => {
     if (!ids.length) return;
     if (!window.confirm(`Delete ${ids.length} document(s)?`)) return;
     try {
-      await axios.post("http://localhost:5000/api/policies/bulk-delete", { ids }, {
+      await axios.post(`${API_BASE}/api/policies/bulk-delete`, { ids }, {
         headers: { Authorization: `Bearer ${getToken()}`, "Content-Type": "application/json" },
       });
       toast.success("Deleted successfully");
@@ -90,7 +91,7 @@ const PolicyManagement = () => {
     if (!editDoc) return;
     try {
       const { id, ...payload } = editDoc;
-      await axios.patch(`http://localhost:5000/api/policies/${id}`, payload, {
+      await axios.patch(`${API_BASE}/api/policies/${id}`, payload, {
         headers: { Authorization: `Bearer ${getToken()}` },
       });
       toast.success("Updated");
@@ -221,7 +222,7 @@ const PolicyManagement = () => {
                 <button onClick={()=>setPreviewDoc(null)} className="text-gray-600">✕</button>
               </div>
               <iframe
-                src={`http://localhost:5000/api/policies/${previewDoc.id}/file?token=${getToken()}`}
+                src={`${API_BASE}/api/policies/${previewDoc.id}/file?token=${getToken()}`}
                 className="w-full h-[70vh]"
                 title="preview"
               />

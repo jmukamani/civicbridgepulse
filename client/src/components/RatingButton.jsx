@@ -1,6 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 import { getToken } from "../utils/auth.js";
+import { API_BASE } from "../utils/network.js";
 
 const RatingButton = ({ messageId }) => {
   const [rated, setRated] = useState(false);
@@ -8,7 +9,7 @@ const RatingButton = ({ messageId }) => {
 
   const submitRating = async (value) => {
     await axios.post(
-      `http://localhost:5000/api/messages/${messageId}/rate`,
+      `${API_BASE}/api/messages/${messageId}/rate`,
       { rating: value },
       { headers: { Authorization: `Bearer ${getToken()}` } }
     );

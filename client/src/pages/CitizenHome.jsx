@@ -5,8 +5,7 @@ import { formatDateTime } from "../utils/datetime.js";
 import CountdownTimer from "../components/CountdownTimer.jsx";
 import axios from "axios";
 import ResourceCard from "../components/ResourceCard.jsx";
-
-const API_BASE = "http://localhost:5000";
+import { API_BASE } from "../utils/network.js";
 
 // Convert snake_case status into "Title Case" with spaces
 const formatStatus = (str) =>

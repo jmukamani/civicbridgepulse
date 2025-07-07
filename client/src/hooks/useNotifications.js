@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { getToken } from "../utils/auth.js";
 import useSocket from "./useSocket.js";
-
-const API_BASE = "http://localhost:5000";
+import { API_BASE } from "../utils/network.js";
 
 const useNotifications = () => {
   const [notifications, setNotifications] = useState([]);

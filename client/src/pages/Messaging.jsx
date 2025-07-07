@@ -8,6 +8,7 @@ import { notifySuccess, notifyError } from "../utils/notifications.js";
 import useOnlineStatus from "../hooks/useOnlineStatus.js";
 import { queueAction, generateId } from "../utils/db.js";
 import { addLocalMessage } from "../utils/localDB.js";
+import { API_BASE } from "../utils/network.js";
 
 const Messaging = () => {
   const { userId: otherId } = useParams();
@@ -28,7 +29,7 @@ const Messaging = () => {
   useEffect(() => {
     if (!otherId) return;
     const fetchMessages = async () => {
-      const res = await axios.get(`http://localhost:5000/api/messages/with/${otherId}`, {
+      const res = await axios.get(`${API_BASE}/api/messages/with/${otherId}`, {
         params: { topic },
         headers: { Authorization: `Bearer ${getToken()}` },
       });
@@ -65,7 +66,7 @@ const Messaging = () => {
   useEffect(() => {
     const fetchThreads = async () => {
       try {
-        const res = await axios.get("http://localhost:5000/api/messages/threads", {
+        const res = await axios.get(`${API_BASE}/api/messages/threads`, {
           headers: { Authorization: `Bearer ${getToken()}` },
         });
         setThreads(res.data);
@@ -82,7 +83,7 @@ const Messaging = () => {
 
     if (online) {
       try {
-        const res = await axios.post("http://localhost:5000/api/messages/send", msgPayload, {
+        const res = await axios.post(`${API_BASE}/api/messages/send`, msgPayload, {
           headers: { Authorization: `Bearer ${getToken()}` },
         });
         setMessages((prev) => [...prev, res.data]);
