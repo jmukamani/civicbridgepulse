@@ -87,7 +87,7 @@ const PORT = process.env.PORT || 5000;
       console.log(`Server running on port ${PORT}`);
     });
 
-    // Socket.io setup
+    // Initialize Socket.IO
     const { Server } = await import("socket.io");
     const io = new Server(server, {
       cors: {
