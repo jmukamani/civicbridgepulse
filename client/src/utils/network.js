@@ -10,7 +10,8 @@ axios.defaults.baseURL = API_BASE;
 const LOCAL_PATTERN = /^https?:\/\/localhost:5000/i;
 axios.interceptors.request.use((config) => {
   if (typeof config.url === "string" && LOCAL_PATTERN.test(config.url)) {
-    config.url = config.url.replace(LOCAL_PATTERN, ""); 
+    config.url = config.url.replace(LOCAL_PATTERN, "");
+  }
   return config;
 });
 
