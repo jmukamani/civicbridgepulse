@@ -271,7 +271,9 @@ const Comments = ({ policyId }) => {
 const prefetchFiles = async (docs) => {
   if (!('caches' in window)) return;
   const cache = await caches.open('policy-files');
-  await Promise.all(docs.map(d => cache.add(`${API_BASE}/${d.filePath}`)));
+  await Promise.all(docs.map(async d => {
+    try { await cache.add(`${API_BASE}/${d.filePath}`); } catch (_) {}
+  }));
 };
 
 // ---- Router wrapper ----
