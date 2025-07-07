@@ -272,7 +272,17 @@ const prefetchFiles = async (docs) => {
   if (!('caches' in window)) return;
   const cache = await caches.open('policy-files');
   await Promise.all(docs.map(async d => {
-    try { await cache.add(`${API_BASE}/${d.filePath}`); } catch (_) {}
+    try {
+      await cache.add(`${API_BASE}/${d.filePath}`);
+    } catch (_) {}
+  }));
+
+  // Also cache metadata endpoint for offline viewing
+  const metaCache = await caches.open('policy-api');
+  await Promise.all(docs.map(async d => {
+    try {
+      await metaCache.add(`${API_BASE}/api/policies/${d.id}`);
+    } catch (_) {}
   }));
 };
 

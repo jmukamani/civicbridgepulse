@@ -1,15 +1,28 @@
 # CivicBridgePulse Kenya
 
+Deployed application link: https://cap-app-civicbridge.azurewebsites.net/
+
 CivicBridgePulse Kenya (CBP) is a full-stack Progressive Web App that connects **citizens** with their elected **representatives** for transparent governance.  
 Citizens can report issues, follow policies, join polls, converse directly with reps and view upcoming civic events. Representatives manage citizen feedback, publish policy documents and schedule town-halls – all in real-time, even when offline.
 
 ---
 
-## Features
+## Table of Contents
+1. Features
+2. Architecture / Tech-stack
+3. Quick Start (local dev)
+4. Environment Variables
+5. Docker & Azure Deployment
+6. Offline-first details
+7. Testing
+8. Useful npm scripts
 
+---
+
+## 1  Features
 ### Citizens
 * Report local issues (with status tracking)
-* View county-specific policy documents & summaries (EN / SW)
+* View policy documents & summaries
 * Participate in polls & forums
 * Direct messaging with representatives (delivery / read receipts)
 * Receive push-style toasts for new replies, events & policy updates
@@ -25,125 +38,156 @@ Citizens can report issues, follow policies, join polls, converse directly with 
 
 ---
 
-## Tech Stack
-
-| Layer | Technology |
-|-------|------------|
-| **Frontend** | React 18, Vite, Tailwind CSS, React-Router v6 |
-|             | Axios, Socket.IO-client, react-i18next |
-|             | idb-keyval + custom Service-Worker (PWA/offline) |
-| **Backend** | Node.js (ESM), Express 4, Socket.IO, Sequelize 6 |
-|             | PostgreSQL, Multer, pdfjs-dist, mammoth |
-|             | JWT auth (jsonwebtoken), bcryptjs |
-|             | Swagger-UI, Nodemailer, @vitalets/google-translate-api |
-| **Testing** | Jest, React Testing Library, Supertest, Playwright |
+## 2  Architecture / Tech-stack
+| Layer          | Tech |
+| -------------- | ---- |
+| Front-end      | React 18, Vite, Tailwind CSS, React-Router v6 |
+|                | Socket.IO-client, Axios, idb-keyval |
+| PWA            | Custom Service-Worker (Workbox) – runtime caching + BG Sync |
+| Back-end API   | Node 18 (ESM), Express 4, Socket.IO 4 |
+| Database       | PostgreSQL 14, Sequelize 6 |
+| Misc           | Swagger-UI, Nodemailer, pdfjs-dist, mammoth, Google-Translate-API |
+| Tests          | Jest, RTL, Supertest, Playwright |
+| CI/CD          | GitHub Actions ➜ Docker ➜ Azure Container Registry ➜ App Service |
 
 ---
 
-## Local Setup
+## 3  Quick Start (local dev)
+### 3.1  Prerequisites
+* Node ≥ 18 & npm
+* PostgreSQL ≥ 13 (running locally)
+* **Optional:** Docker if you prefer containers
 
-### 1. Prerequisites
-* Node ≥ 18
-* PostgreSQL (running & accessible)
-
-### 2. Clone & install
+### 3.2  Clone & install
 ```bash
-# root
-git clone https://github.com/jmukamani/civicbridgepulse.git
+# clone
+git clone https://github.com/<your-fork>/civicbridgepulse.git
 cd civicbridgepulse
 
-# install root dev deps (Playwright etc.)
+# install workspace tools (Playwright etc.)
 npm i
 
-# server
-cd server
-npm i
-cp env.example .env   # edit DB creds, JWT_SECRET, CLIENT_URL, etc.
+# server deps
+cd server && npm i && cp env.example .env
+# edit .env → DB creds, JWT_SECRET, CLIENT_URL, SMTP …
 
-# client
-cd ../client
-npm i
+# client deps
+cd ../client && npm i
 ```
 
-### 3. Database
+### 3.3  Database
 ```bash
-# create db & import schema
-createdb civicbrigepulse
+createdb civicbridgepulse
 psql civicbridgepulse < ../database/schema.sql
 ```
 
-### 4. Development scripts
+### 3.4  Run
 ```bash
-# terminal 1 – backend
-cd server
-npm run dev          # nodemon on :5000
+# terminal 1 – API
+cd server && npm run dev        # -> http://localhost:5000
 
-# terminal 2 – frontend
-cd client
-npm run dev          # Vite on :5173
+# terminal 2 – PWA
+cd client && npm run dev        # -> http://localhost:5173
 ```
-Open http://localhost:5173
+Open http://localhost:5173 in your browser.
 
 ---
 
-## Environment Variables (server/.env)
-```
-PORT=5000
-DATABASE_URL=postgres://user:pass@localhost:5432/cbp
-JWT_SECRET=supersecret
+## 4  Environment Variables (`server/.env`)
+| Key            | Description                            |
+| -------------- | -------------------------------------- |
+| PORT           | Express port (default 5000)            |
+| DATABASE_URL   | Postgres connection string             |
+| JWT_SECRET     | Long random string (token signing)     |
+| CLIENT_URL     | Front-end origin (http://localhost:5173)|
+| EMAIL_HOST/…   | SMTP credentials (optional)            |
+
+Example:
+```env
+DATABASE_URL=postgres://cbp:cbp@localhost:5432/cbp
+JWT_SECRET=ba90c109894c4…40
 CLIENT_URL=http://localhost:5173
-EMAIL_USER=...
-EMAIL_PASS=...
 ```
 
 ---
 
-## Offline Support
-* Service-Worker caches static assets & API GET responses.
-* `idb-keyval` queue stores POST actions (`issue`, `message`, `event`).
-* Background-sync (`cbp-sync`) replays queued actions when connection is restored.
-
----
-
-## Running Tests
+## 5  Docker & Azure Deployment
+### 5.1  One-shot build (local)
 ```bash
-# backend unit & integration
-cd server
-npm test
+docker build -t cbp:latest .
+```
+The multi-stage Dockerfile builds the React front-end, bundles it into
+`server/public`, installs server deps, then starts `node src/index.js` on
+port 4000.
 
-# frontend unit
-cd ../client
-npm test
+### 5.2  Push to Azure & deploy (CLI)
+```bash
+RG=cap-rg
+ACR=capregistry
+APP=cap-app-civicbridge
 
-# E2E
-npm run test:e2e      # Playwright
+az group create -n $RG -l westeurope
+az acr create -g $RG -n $ACR --sku Basic --admin-enabled true
+az acr login -n $ACR
+
+docker tag cbp:latest $ACR.azurecr.io/cbp:v1
+docker push $ACR.azurecr.io/cbp:v1
+
+az appservice plan create -g $RG -n cap-plan --is-linux --sku B1
+az webapp create -g $RG -p cap-plan -n $APP \
+  --deployment-container-image-name $ACR.azurecr.io/cbp:v1 \
+  --registry-login-server $ACR.azurecr.io \
+  --registry-username $(az acr credential show -n $ACR --query username -o tsv) \
+  --registry-password $(az acr credential show -n $ACR --query passwords[0].value -o tsv)
+```
+Visit **https://$APP.azurewebsites.net** – the app is live (see the public
+instance at https://cap-app-civicbridge.azurewebsites.net).
+
+### 5.3  GitHub Actions
+`.github/workflows/deploy.yml` automatically:
+1. Builds Docker image on every push to `main`.
+2. Pushes to ACR.
+3. Deploys image to the Web App using the publish-profile secret.
+Add these repo secrets:
+* `REGISTRY_USERNAME`, `REGISTRY_PASSWORD` (from ACR)
+* `AZURE_WEBAPP_PUBLISH_PROFILE` (download from App Service → *Get publish profile*)
+
+---
+
+## 6  Offline-first Details
+* **Service-Worker** (`client/src/sw.js`)
+  * Precaches Vite assets.
+  * `NetworkFirst` caches `/api/**` GETs (metadata, comments) for 24 h.
+  * `CacheFirst` caches `/uploads/policies/**` plus any other file in
+    `/uploads/` (PDF, DOCX, images) for 1 year.
+* **Prefetch logic** – When the policy list loads online, it pre-adds each
+  PDF and its metadata to the caches so the viewer works offline.
+* **Background Sync** – Failed POSTs (issues, messages, etc.) are stored in
+  IndexedDB (`idb-keyval`) and replayed when connectivity returns.
+
+---
+
+## 7  Testing
+```bash
+# backend
+cd server && npm test            # Jest + Supertest
+
+# front-end unit
+cd ../client && npm test         # RTL / Jest
+
+# end-to-end
+npm run test:e2e                 # Playwright
 ```
 
 ---
 
-## Folder Structure
-```
-cap/
- ├─ client/             # React PWA
- │   ├─ src/components
- │   ├─ src/pages
- │   ├─ public/sw.js    # service-worker
- │   └─ ...
- ├─ server/             # Express API
- │   ├─ src/models
- │   ├─ src/routes
- │   ├─ uploads/policies
- │   └─ uploads/events
- └─ database/schema.sql
-```
-
----
-
-## Deployment
-1. Build frontend: `cd client && npm run build` – outputs to `client/dist`.
-2. Serve `dist` via nginx or Express static middleware.
-3. Run `node server/src/index.js` (ensure `.env` set + DB).  
-   Use pm2 / systemd for process supervision.
+## 8  npm scripts (root)
+| Script | Description |
+| ------ | ----------- |
+| `npm run dev` (client/server) | Development servers with HMR & nodemon |
+| `npm run build` (client)      | Production React build (PWA) |
+| `npm run lint`                | ESLint check |
+| `npm run test` / `test:e2e`   | Unit & Playwright tests |
 
 ---
 
