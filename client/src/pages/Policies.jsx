@@ -140,6 +140,21 @@ const PolicyViewer = () => {
   const id = pathname.split("/").pop();
   const [doc, setDoc] = useState(null);
   const [lang, setLang] = useState('en');
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [fileAvailable, setFileAvailable] = useState(false);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   useEffect(() => {
     const fetchDoc = async () => {
@@ -148,28 +163,76 @@ const PolicyViewer = () => {
           headers: { Authorization: `Bearer ${getToken()}` },
         });
         setDoc(res.data);
-        // store for offline
+        
+        // Update local storage cache
         const saved = JSON.parse(localStorage.getItem("policies_cache")) || [];
-        const exists = saved.find((d) => d.id === res.data.id);
-        if (!exists) {
-          localStorage.setItem("policies_cache", JSON.stringify([...saved, res.data]));
+        const updatedSaved = saved.filter(d => d.id !== res.data.id);
+        updatedSaved.push(res.data);
+        localStorage.setItem("policies_cache", JSON.stringify(updatedSaved));
+        
+        // Check if file is available (cached or online)
+        if (res.data.filePath) {
+          await checkFileAvailability(res.data.filePath);
         }
       } catch (err) {
+        console.warn('Failed to fetch from API, trying offline cache:', err);
         // offline: look in localStorage
         const cached = JSON.parse(localStorage.getItem("policies_cache")) || [];
         const found = cached.find((d) => d.id === id);
-        if (found) setDoc(found);
-        else console.error(err);
+        if (found) {
+          setDoc(found);
+          if (found.filePath) {
+            await checkFileAvailability(found.filePath);
+          }
+        } else {
+          console.error('Policy not found in cache:', err);
+          toast.error('Policy not available offline. Please check your connection.');
+        }
       }
     };
     fetchDoc();
   }, [id]);
 
-  if (!doc || !doc.filePath) {
+  const checkFileAvailability = async (filePath) => {
+    try {
+      if ('caches' in window) {
+        const cache = await caches.open('policy-files');
+        const cachedResponse = await cache.match(`${API_BASE}/${filePath}`);
+        if (cachedResponse) {
+          setFileAvailable(true);
+          return;
+        }
+      }
+      
+      // If not cached, check if we're online
+      if (isOnline) {
+        setFileAvailable(true);
+      } else {
+        setFileAvailable(false);
+      }
+    } catch (error) {
+      console.warn('Error checking file availability:', error);
+      setFileAvailable(isOnline);
+    }
+  };
+
+  if (!doc) {
     return (
       <div className="space-y-4">
         <button onClick={() => navigate(-1)} className="text-indigo-600">← Back</button>
-        <p className="text-gray-600">Document not available offline.</p>
+        <div className="flex items-center space-x-2">
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600"></div>
+          <p className="text-gray-600">Loading policy...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!doc.filePath) {
+    return (
+      <div className="space-y-4">
+        <button onClick={() => navigate(-1)} className="text-indigo-600">← Back</button>
+        <p className="text-gray-600">Document file not available.</p>
       </div>
     );
   }
@@ -190,18 +253,67 @@ const PolicyViewer = () => {
           <BudgetChart data={typeof doc.budget=== 'string'? JSON.parse(doc.budget): doc.budget} />
         </div>
       )}
-      {doc.filePath.toLowerCase().endsWith(".pdf") ? (
-        <embed
-          src={`${API_BASE}/${doc.filePath}`}
-          type="application/pdf"
-          className="w-full h-[80vh] border"
-        />
+      
+      {/* Offline status indicator */}
+      {!isOnline && (
+        <div className="mb-4 p-3 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700">
+          <div className="flex items-center">
+            <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+            <p>You're offline. {fileAvailable ? 'Showing cached document.' : 'Document may not display properly.'}</p>
+          </div>
+        </div>
+      )}
+      
+      {/* Document display */}
+      {fileAvailable ? (
+        doc.filePath.toLowerCase().endsWith(".pdf") ? (
+          <embed
+            src={`${API_BASE}/${doc.filePath}`}
+            type="application/pdf"
+            className="w-full h-[80vh] border"
+            onError={(e) => {
+              console.error('PDF embed error:', e);
+              if (!isOnline) {
+                toast.error('PDF not available offline. Please connect to internet.');
+              }
+            }}
+          />
+        ) : (
+          <iframe
+            title="doc-viewer"
+            className="w-full h-[80vh] border"
+            src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(`${API_BASE}/${doc.filePath}`)}`}
+            onError={(e) => {
+              console.error('Document viewer error:', e);
+              if (!isOnline) {
+                toast.error('Document viewer not available offline.');
+              }
+            }}
+          />
+        )
       ) : (
-        <iframe
-          title="doc-viewer"
-          className="w-full h-[80vh] border"
-          src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(`${API_BASE}/${doc.filePath}`)}`}
-        />
+        <div className="w-full h-[80vh] border border-dashed border-gray-300 flex items-center justify-center bg-gray-50">
+          <div className="text-center p-6">
+            <svg className="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Document Unavailable Offline</h3>
+            <p className="text-gray-500 mb-4">This document isn't cached for offline viewing.</p>
+            {!isOnline && (
+              <p className="text-sm text-gray-400">Connect to internet to view the full document.</p>
+            )}
+            {isOnline && (
+              <button 
+                onClick={() => window.location.reload()} 
+                className="text-indigo-600 hover:text-indigo-800 font-medium"
+              >
+                Try to reload document
+              </button>
+            )}
+          </div>
+        </div>
       )}
 
       <Comments policyId={id} />
@@ -270,20 +382,46 @@ const Comments = ({ policyId }) => {
 // helper to cache files
 const prefetchFiles = async (docs) => {
   if (!('caches' in window)) return;
-  const cache = await caches.open('policy-files');
-  await Promise.all(docs.map(async d => {
-    try {
-      await cache.add(`${API_BASE}/${d.filePath}`);
-    } catch (_) {}
-  }));
+  
+  try {
+    const fileCache = await caches.open('policy-files');
+    const apiCache = await caches.open('external-api-cache');
+    
+    // Cache policy files and metadata in parallel
+    const cachePromises = docs.map(async (d) => {
+      const promises = [];
+      
+      // Cache the file if it exists
+      if (d.filePath) {
+        promises.push(
+          fileCache.add(`${API_BASE}/${d.filePath}`).catch(err => {
+            console.warn(`Failed to cache file ${d.filePath}:`, err);
+          })
+        );
+      }
+      
+      // Cache the metadata endpoint
+      promises.push(
+        apiCache.add(`${API_BASE}/api/policies/${d.id}`).catch(err => {
+          console.warn(`Failed to cache metadata for policy ${d.id}:`, err);
+        })
+      );
+      
+      // Cache comments endpoint
+      promises.push(
+        apiCache.add(`${API_BASE}/api/policies/${d.id}/comments`).catch(err => {
+          console.warn(`Failed to cache comments for policy ${d.id}:`, err);
+        })
+      );
+      
+      return Promise.all(promises);
+    });
 
-  // Also cache metadata endpoint for offline viewing
-  const metaCache = await caches.open('policy-api');
-  await Promise.all(docs.map(async d => {
-    try {
-      await metaCache.add(`${API_BASE}/api/policies/${d.id}`);
-    } catch (_) {}
-  }));
+    await Promise.all(cachePromises);
+    console.log(`Successfully cached ${docs.length} policies for offline access`);
+  } catch (error) {
+    console.error('Error caching policies:', error);
+  }
 };
 
 // ---- Router wrapper ----

@@ -42,4 +42,32 @@ axios.interceptors.response.use(
     }
     return Promise.reject(error);
   }
-); 
+);
+
+// Utility function to manually cache important data
+export const warmCache = async (url, data) => {
+  try {
+    const key = `resp-${url}`;
+    const payload = {
+      ts: Date.now(),
+      data: data,
+    };
+    await set(key, payload);
+  } catch (error) {
+    console.warn('Failed to warm cache for:', url, error);
+  }
+};
+
+// Check if data is available in cache
+export const getCachedData = async (url) => {
+  try {
+    const cached = await get(`resp-${url}`);
+    if (cached && Date.now() - cached.ts < MAX_AGE) {
+      return cached.data;
+    }
+    return null;
+  } catch (error) {
+    console.warn('Failed to get cached data for:', url, error);
+    return null;
+  }
+}; 

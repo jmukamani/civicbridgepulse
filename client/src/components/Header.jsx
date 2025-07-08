@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { getUser, removeToken } from "../utils/auth.js";
 import { useNavigate } from "react-router-dom";
-import { Bars3Icon } from "@heroicons/react/24/outline";
+import { Bars3Icon, WifiIcon } from "@heroicons/react/24/outline";
 import NotificationBell from "./NotificationBell.jsx";
+import useOnlineStatus from "../hooks/useOnlineStatus.js";
 
 const Header = ({ onToggleSidebar }) => {
   const user = getUser();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const isOnline = useOnlineStatus();
 
   const logout = () => {
     removeToken();
@@ -21,6 +23,14 @@ const Header = ({ onToggleSidebar }) => {
           <Bars3Icon className="h-6 w-6 text-gray-700" />
         </button>
         <h1 className="text-xl font-bold">CivicBridgePulse</h1>
+        
+        {/* Offline indicator */}
+        {!isOnline && (
+          <div className="ml-4 flex items-center gap-2 px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm">
+            <WifiIcon className="h-4 w-4" />
+            <span>Offline</span>
+          </div>
+        )}
       </div>
       <div className="relative flex items-center gap-4">
         <NotificationBell />
