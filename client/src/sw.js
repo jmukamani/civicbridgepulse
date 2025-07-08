@@ -1,6 +1,6 @@
 import { precacheAndRoute } from 'workbox-precaching';
 import { registerRoute } from 'workbox-routing';
-import { CacheFirst, NetworkFirst } from 'workbox-strategies';
+import { CacheFirst, NetworkFirst, StaleWhileRevalidate } from 'workbox-strategies';
 import { ExpirationPlugin } from 'workbox-expiration';
 import { keys as idbKeys, get as idbGet, del as idbDel, update as idbUpdate } from 'idb-keyval';
 
@@ -75,7 +75,7 @@ registerRoute(
   }),
 );
 
-// Runtime caching for EXTERNAL API calls (network-first with longer offline support)
+// Runtime caching for EXTERNAL API calls with custom strategy that handles auth failures
 registerRoute(
   ({ url, request }) => 
     isApiUrl(url) && request.method === 'GET',
@@ -87,11 +87,24 @@ registerRoute(
         maxEntries: 100, 
         maxAgeSeconds: 60 * 60 * 24 * 7 // 7 days for external API cache
       }),
+      {
+        // Custom plugin to handle auth errors gracefully
+        requestWillFetch: async ({ request }) => {
+          return request;
+        },
+        fetchDidFail: async ({ originalRequest, error }) => {
+          console.warn('External API fetch failed:', originalRequest.url, error);
+        },
+        cacheWillUpdate: async ({ response }) => {
+          // Don't cache auth errors or server errors
+          return response.status === 200 ? response : null;
+        }
+      }
     ],
   }),
 );
 
-// Cache policy PDFs and docs with a CacheFirst strategy, limit entries & size
+// Cache policy PDFs and docs with a CacheFirst strategy
 registerRoute(
   ({ url }) => isPolicyFileUrl(url),
   new CacheFirst({

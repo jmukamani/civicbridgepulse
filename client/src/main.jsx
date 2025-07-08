@@ -8,6 +8,7 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import './utils/network.js';
 import './utils/axiosCache.js';
+import './utils/offlineTest.js';
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

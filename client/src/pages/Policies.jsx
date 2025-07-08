@@ -20,16 +20,26 @@ const PolicyList = () => {
         headers: { Authorization: `Bearer ${getToken()}` },
       });
       setDocs(res.data);
-      prefetchFiles(res.data);
-      // Persist for offline usage
+      
+      // Cache data and prefetch files
       localStorage.setItem("policies_cache", JSON.stringify(res.data));
+      
+      // Only prefetch if we're online to avoid unnecessary auth errors
+      if (navigator.onLine && res.data.length > 0) {
+        prefetchFiles(res.data);
+      }
     } catch (err) {
+      console.warn('Failed to fetch policies from API:', err);
+      
       // Offline fallback
       const cached = localStorage.getItem("policies_cache");
       if (cached) {
-        setDocs(JSON.parse(cached));
+        const cachedPolicies = JSON.parse(cached);
+        setDocs(cachedPolicies);
+        toast.info(`Showing ${cachedPolicies.length} cached policies`);
       } else {
-        console.error(err);
+        console.error('No cached policies available:', err);
+        toast.error('No policies available offline. Please connect to internet.');
       }
     }
   };
@@ -204,9 +214,15 @@ const PolicyViewer = () => {
         }
       }
       
-      // If not cached, check if we're online
+      // If not cached but we're online, try to fetch it directly to verify
       if (isOnline) {
-        setFileAvailable(true);
+        try {
+          const response = await fetch(`${API_BASE}/${filePath}`, { method: 'HEAD' });
+          setFileAvailable(response.ok);
+        } catch (fetchError) {
+          console.warn('File fetch test failed:', fetchError);
+          setFileAvailable(false);
+        }
       } else {
         setFileAvailable(false);
       }
@@ -386,32 +402,63 @@ const prefetchFiles = async (docs) => {
   try {
     const fileCache = await caches.open('policy-files');
     const apiCache = await caches.open('external-api-cache');
+    const token = getToken();
+    
+    if (!token) {
+      console.warn('No auth token available for caching');
+      return;
+    }
     
     // Cache policy files and metadata in parallel
     const cachePromises = docs.map(async (d) => {
       const promises = [];
       
-      // Cache the file if it exists
+      // Cache the file if it exists (files usually don't need auth)
       if (d.filePath) {
         promises.push(
-          fileCache.add(`${API_BASE}/${d.filePath}`).catch(err => {
-            console.warn(`Failed to cache file ${d.filePath}:`, err);
-          })
+          fetch(`${API_BASE}/${d.filePath}`)
+            .then(response => {
+              if (response.ok) {
+                return fileCache.put(`${API_BASE}/${d.filePath}`, response);
+              }
+              throw new Error(`Failed to fetch file: ${response.status}`);
+            })
+            .catch(err => {
+              console.warn(`Failed to cache file ${d.filePath}:`, err);
+            })
         );
       }
       
-      // Cache the metadata endpoint
+      // Cache the metadata endpoint with auth
       promises.push(
-        apiCache.add(`${API_BASE}/api/policies/${d.id}`).catch(err => {
-          console.warn(`Failed to cache metadata for policy ${d.id}:`, err);
+        fetch(`${API_BASE}/api/policies/${d.id}`, {
+          headers: { Authorization: `Bearer ${token}` }
         })
+          .then(response => {
+            if (response.ok) {
+              return apiCache.put(`${API_BASE}/api/policies/${d.id}`, response);
+            }
+            throw new Error(`Failed to fetch metadata: ${response.status}`);
+          })
+          .catch(err => {
+            console.warn(`Failed to cache metadata for policy ${d.id}:`, err);
+          })
       );
       
-      // Cache comments endpoint
+      // Cache comments endpoint with auth
       promises.push(
-        apiCache.add(`${API_BASE}/api/policies/${d.id}/comments`).catch(err => {
-          console.warn(`Failed to cache comments for policy ${d.id}:`, err);
+        fetch(`${API_BASE}/api/policies/${d.id}/comments`, {
+          headers: { Authorization: `Bearer ${token}` }
         })
+          .then(response => {
+            if (response.ok) {
+              return apiCache.put(`${API_BASE}/api/policies/${d.id}/comments`, response);
+            }
+            throw new Error(`Failed to fetch comments: ${response.status}`);
+          })
+          .catch(err => {
+            console.warn(`Failed to cache comments for policy ${d.id}:`, err);
+          })
       );
       
       return Promise.all(promises);
