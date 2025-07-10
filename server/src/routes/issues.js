@@ -5,8 +5,62 @@ import { logInteraction } from "../utils/logInteraction.js";
 import IssueStatusHistory from "../models/IssueStatusHistory.js";
 import { Op } from "sequelize";
 import { sendNotification } from "../utils/notify.js";
+import User from "../models/User.js";
 
 const router = express.Router();
+
+const categoryToSpecializationMap = {
+  infrastructure: [
+    "Infrastructure & Roads",
+    "Water & Sanitation",
+    "Housing & Urban Planning",
+    "Transport & Mobility",
+    "Energy & Utilities"
+  ],
+  service: [
+    "Social Services",
+    "Healthcare Services",
+    "Education",
+    "Economic Development"
+  ],
+  environment: [
+    "Environmental Issues",
+    "Water & Sanitation",
+    "Agriculture & Livestock"
+  ],
+  security: ["Security & Safety"],
+  other: [] // Fallback – show all reps
+};
+
+// Find relevant representatives for an issue
+const findRelevantRepresentatives = async (category, county) => {
+  const relevantSpecializations = categoryToSpecializationMap[category] || [];
+  
+  const where = {
+    role: "representative",
+    isRepVerified: true,
+    verificationStatus: "approved",
+  };
+
+  if (county) {
+    where.county = county;
+  }
+
+  // If category has specific specializations, filter by them
+  if (relevantSpecializations.length > 0) {
+    where.specializations = {
+      [Op.overlap]: relevantSpecializations
+    };
+  }
+
+  const representatives = await User.findAll({
+    where,
+    attributes: ["id", "name", "email", "specializations"],
+    order: [["name", "ASC"]]
+  });
+
+  return representatives;
+};
 
 /**
  * @swagger
@@ -68,7 +122,14 @@ router.post("/", authenticate("citizen"), async (req, res) => {
       ward: req.user.ward,
     });
     await logInteraction(req.user.id, "issue", issue.id);
-    res.status(201).json(issue);
+
+    // Find relevant representatives for this issue
+    const suggestedRepresentatives = await findRelevantRepresentatives(category, req.user.county);
+
+    res.status(201).json({
+      ...issue.toJSON(),
+      suggestedRepresentatives
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
@@ -93,12 +154,34 @@ router.post("/", authenticate("citizen"), async (req, res) => {
 // Enhanced list with filters & search
 router.get("/", authenticate(), async (req, res) => {
   try {
-    const { status, category, priority, q, from, to } = req.query;
+    const { status, category, priority, q, from, to, showAll } = req.query;
     const where = {};
 
     // Scope by county
     const userCounty = req.user.county;
     if (userCounty) where.county = userCounty;
+
+    // Restrict citizens to their own issues only
+    if (req.user.role === "citizen") {
+      where.citizenId = req.user.id;
+    }
+
+    // For representatives, filter by relevant issues based on specializations
+    if (req.user.role === "representative" && req.user.specializations && !showAll) {
+      const userSpecializations = req.user.specializations || [];
+      const relevantCategories = [];
+      
+      // Find categories that match the representative's specializations
+      for (const [cat, specs] of Object.entries(categoryToSpecializationMap)) {
+        if (specs.length === 0 || specs.some(spec => userSpecializations.includes(spec))) {
+          relevantCategories.push(cat);
+        }
+      }
+      
+      if (relevantCategories.length > 0) {
+        where.category = { [Op.in]: relevantCategories };
+      }
+    }
 
     if (status) where.status = status;
     if (category) where.category = category;
@@ -112,7 +195,22 @@ router.get("/", authenticate(), async (req, res) => {
       where.title = { [Op.iLike]: `%${q}%` };
     }
 
-    const issues = await Issue.findAll({ where, order: [["createdAt", "DESC"]] });
+    const issues = await Issue.findAll({ 
+      where, 
+      order: [["createdAt", "DESC"]],
+      include: [
+        {
+          model: User,
+          as: "citizen",
+          attributes: ["id", "name", "email"]
+        },
+        {
+          model: User,
+          as: "representative",
+          attributes: ["id", "name", "email", "specializations"]
+        }
+      ]
+    });
     res.json(issues);
   } catch (err) {
     console.error(err);
@@ -221,6 +319,41 @@ router.post("/:id/assign", authenticate(["representative", "admin"]), async (req
  */
 
 // Update status (acknowledged/resolved)
+/**
+ * @swagger
+ * /api/issues/{id}/suggested-representatives:
+ *   get:
+ *     summary: Get suggested representatives for an issue
+ *     tags: [Issues]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Issue ID
+ */
+
+// Get suggested representatives for an issue
+router.get("/:id/suggested-representatives", authenticate(), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const issue = await Issue.findByPk(id);
+    
+    if (!issue) {
+      return res.status(404).json({ message: "Issue not found" });
+    }
+
+    const suggestedRepresentatives = await findRelevantRepresentatives(issue.category, issue.county);
+    res.json(suggestedRepresentatives);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 router.patch("/:id/status", authenticate(), async (req, res) => {
   try {
     const { id } = req.params;

@@ -14,6 +14,7 @@ import forumsRoutes from "./routes/forums.js";
 import analyticsRoutes from "./routes/analytics.js";
 import resourcesRoutes from "./routes/resources.js";
 import notificationsRoutes from "./routes/notifications.js";
+import adminRoutes from "./routes/admin.js";
 import swaggerUi from "swagger-ui-express";
 import swaggerSpec from "./swagger.js";
 import eventsRoutes from "./routes/events.js";
@@ -22,11 +23,27 @@ import { fileURLToPath } from "url";
 
 dotenv.config();
 
+console.log("ALLOWED_ORIGINS =", process.env.CLIENT_URL);
+
 const app = express();
-const CLIENT_ORIGIN = process.env.CLIENT_URL || "http://localhost:5173";
+// Support multiple allowed origins (comma-separated list in CLIENT_URL)
+const CLIENT_ORIGIN_RAW = process.env.CLIENT_URL || "http://localhost:5173";
+const ALLOWED_ORIGINS = CLIENT_ORIGIN_RAW.split(",").map((o) => o.trim());
+
 app.use(
   cors({
-    origin: CLIENT_ORIGIN,
+    origin: (origin, cb) => {
+      // Allow REST tools or server-to-server calls with no Origin header
+      if (!origin) return cb(null, true);
+
+      // Automatically allow any localhost:<port> during development
+      const isLocalhost = /^http:\/\/localhost(:\d+)?$/.test(origin);
+
+      if (ALLOWED_ORIGINS.includes(origin) || isLocalhost) {
+        return cb(null, true);
+      }
+      return cb(new Error("Not allowed by CORS"));
+    },
     credentials: true,
   })
 );
@@ -48,6 +65,7 @@ app.use("/api/analytics", analyticsRoutes);
 app.use("/api/resources", resourcesRoutes);
 app.use("/api/notifications", notificationsRoutes);
 app.use("/api/events", eventsRoutes);
+app.use("/api/admin", adminRoutes);
 
 // Swagger docs endpoints
 app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));

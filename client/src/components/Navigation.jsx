@@ -34,6 +34,20 @@ const representativeLinks = [
   { to: "performance", label: "Performance" },
 ];
 
+const adminLinks = [
+  { to: "admin-dashboard", label: "Admin Dashboard" },
+  { to: "user-management", label: "User Management" },
+  { to: "verification-queue", label: "Verification Queue" },
+  { to: "messages", label: "Messages" },
+  { to: "issues", label: "Issues" },
+  { to: "polls", label: "Polls" },
+  { to: "forums", label: "Forums" },
+  { to: "resources", label: "Resources" },
+  { to: "analytics", label: "Analytics" },
+  { to: "events", label: "Events" },
+  { to: "settings", label: "Settings" },
+];
+
 const settingsLink = { to: "settings", label: "Settings" };
 
 const Navigation = ({ isOpen, onClose }) => {
@@ -48,6 +62,8 @@ const Navigation = ({ isOpen, onClose }) => {
     links = [...links, ...citizenLinks];
   } else if (role === "representative") {
     links = [...links, ...representativeLinks];
+  } else if (role === "admin") {
+    links = [...links, ...adminLinks];
   }
 
   const NavLink = ({ to, label, disabled }) => {

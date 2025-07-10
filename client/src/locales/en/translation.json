@@ -1,0 +1,18 @@
+{
+  "welcome": "Welcome",
+  "login": "Login",
+  "register": "Register",
+  "email": "Email",
+  "password": "Password",
+  "name": "Name",
+  "logout": "Logout",
+  "category": "Category",
+  "urgent": "Urgent",
+  "policy": "Policy Question",
+  "local": "Local Issue",
+  "other": "Other",
+  "search": "Search",
+  "filter": "Filter",
+  "public_profile": "Make my profile public (visible to others)",
+  "county": "County"
+} 

@@ -1,27 +1,95 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useTranslation } from "react-i18next";
 import { API_BASE } from "../utils/network.js";
+import { notifySuccess } from "../utils/toast.js";
 
 const Register = () => {
   const [form, setForm] = useState({ name: "", email: "", password: "", role: "citizen", county: "" });
+  const [specializations, setSpecializations] = useState([]);
+  
+  // Fallback specializations in case API call fails
+  const fallbackSpecializations = [
+    "Water & Sanitation",
+    "Infrastructure & Roads",
+    "Healthcare Services",
+    "Education",
+    "Environmental Issues",
+    "Agriculture & Livestock",
+    "Security & Safety",
+    "Economic Development",
+    "Housing & Urban Planning",
+    "Energy & Utilities",
+    "Transport & Mobility",
+    "Social Services"
+  ];
+  
+  const [availableSpecializations, setAvailableSpecializations] = useState(fallbackSpecializations);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const navigate = useNavigate();
   const { t } = useTranslation();
 
+  useEffect(() => {
+    // Fetch available specializations
+    const fetchSpecializations = async () => {
+      try {
+        const response = await axios.get(`${API_BASE}/api/admin/specializations`);
+        // Ensure we always have an array
+        const specs = Array.isArray(response.data) ? response.data : fallbackSpecializations;
+        setAvailableSpecializations(specs);
+      } catch (err) {
+        console.error("Failed to fetch specializations, using fallback", err);
+        // Keep using fallback specializations on error
+        setAvailableSpecializations(fallbackSpecializations);
+      }
+    };
+    fetchSpecializations();
+  }, []);
+
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  const handleSpecializationChange = (spec) => {
+    setSpecializations(prev => {
+      if (prev.includes(spec)) {
+        return prev.filter(s => s !== spec);
+      } else {
+        return [...prev, spec];
+      }
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate representative specializations
+    if (form.role === "representative" && specializations.length === 0) {
+      setError("Representatives must select at least one area of specialization");
+      return;
+    }
+    
     try {
-      await axios.post(`${API_BASE}/api/auth/register`, form);
-      setSuccess("Registration successful. Check email to verify.");
-      setError(null);
-      setTimeout(() => navigate("/login"), 2000);
+      const submitData = { ...form };
+      if (form.role === "representative") {
+        submitData.specializations = specializations;
+      }
+      
+      const res = await axios.post(`${API_BASE}/api/auth/register`, submitData);
+      
+      const msg = res.data?.message || (form.role === "admin"
+        ? "Admin account created successfully! You can login immediately."
+        : "Registration successful. Check your email for verification link.");
+
+      // Toast message immediately
+      notifySuccess(msg);
+
+      // Redirect to login and pass message in location state
+      navigate("/login", { state: { message: msg } });
+      return; // stop further execution
+       
     } catch (err) {
       setError(err.response?.data?.message || "Registration failed");
       setSuccess(null);
@@ -89,8 +157,45 @@ const Register = () => {
           >
             <option value="citizen">Citizen</option>
             <option value="representative">Representative</option>
+            <option value="admin">Admin (Development Only)</option>
           </select>
         </div>
+
+        {form.role === "representative" && (
+          <div className="mb-4">
+            <label className="block mb-2 text-sm font-medium">Areas of Specialization</label>
+            <p className="text-xs text-gray-600 mb-3">
+              Select your areas of expertise (choose at least one):
+            </p>
+            <div className="max-h-40 overflow-y-auto border rounded p-3 bg-gray-50">
+              {(availableSpecializations || []).map((spec) => (
+                <label key={spec} className="flex items-center mb-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={specializations.includes(spec)}
+                    onChange={() => handleSpecializationChange(spec)}
+                    className="mr-2"
+                  />
+                  <span className="text-sm">{spec}</span>
+                </label>
+              ))}
+            </div>
+            {form.role === "representative" && specializations.length === 0 && (
+              <p className="text-xs text-yellow-600 mt-1">
+                Please select at least one area of specialization
+              </p>
+            )}
+          </div>
+        )}
+
+        {form.role === "representative" && (
+          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+            <p className="text-xs text-yellow-800">
+              <strong>Note:</strong> Representative accounts require admin verification. 
+              You will not be able to access representative features until your account is approved.
+            </p>
+          </div>
+        )}
         <button
           type="submit"
           className="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700"

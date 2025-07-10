@@ -36,6 +36,10 @@ Resource.init(
       allowNull: true,
       defaultValue: [],
     },
+    county: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
     createdBy: {
       type: DataTypes.UUID,
       allowNull: false,

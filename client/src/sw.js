@@ -16,9 +16,9 @@ const getApiBase = () => {
   
   // Default API base patterns to match
   const apiPatterns = [
-    'https://cap-app-civicbridge.azurewebsites.net',
-    'http://localhost:5000',
-    self.location.origin
+    self.location.origin,               // current origin first (dev or prod)
+    'http://localhost:5000',            // common local API
+    'https://cap-app-civicbridge.azurewebsites.net' // production fallback
   ];
   
   return apiPatterns;
@@ -156,8 +156,13 @@ async function handleSync() {
     const { key, type, payload, token, retries=0 } = item;
 
     try {
-      // Use the first API base pattern for sync requests
-      const apiBase = Array.isArray(apiBasePatterns) ? apiBasePatterns[0] : apiBasePatterns;
+      let apiBase;
+      if (Array.isArray(apiBasePatterns)) {
+        // Prefer localhost pattern during development if available
+        apiBase = apiBasePatterns.find(p => p.startsWith('http://localhost')) || apiBasePatterns[0];
+      } else {
+        apiBase = apiBasePatterns;
+      }
       
       if (type === 'issue') {
         await fetch(`${apiBase}/api/issues`, {

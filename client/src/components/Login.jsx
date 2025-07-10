@@ -1,16 +1,29 @@
-import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import axios from "axios";
 import { setToken, getToken } from "../utils/auth.js";
 import { useTranslation } from "react-i18next";
 import { API_BASE } from "../utils/network.js";
+import { notifySuccess } from "../utils/toast.js";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
+  const [info, setInfo] = useState(null);
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useTranslation();
+
+  // On mount, show any message passed via location state
+  useEffect(() => {
+    if (location.state?.message) {
+      setInfo(location.state.message);
+      notifySuccess(location.state.message);
+      // Clear state so it does not reappear on further navigation
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -48,6 +61,7 @@ const Login = () => {
       >
         <h2 className="text-2xl font-bold mb-6 text-center">{t("login")}</h2>
         {error && <p className="text-red-500 mb-4">{error}</p>}
+        {info && <p className="text-green-600 mb-4">{info}</p>}
         <div className="mb-4">
           <label className="block mb-1">{t("email")}</label>
           <input

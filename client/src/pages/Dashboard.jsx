@@ -4,10 +4,14 @@ import Representatives from "./Representatives.jsx";
 import PolicyAnalysis from "./PolicyAnalysis.jsx";
 import Settings from "./Settings.jsx";
 import Citizens from "./Citizens.jsx";
+import UserManagement from "./UserManagement.jsx";
 import Messaging from "./Messaging.jsx";
 import Conversations from "./Conversations.jsx";
 import CitizenHome from "./CitizenHome.jsx";
 import RepresentativeHome from "./RepresentativeHome.jsx";
+import AdminHome from "./AdminHome.jsx";
+import AdminDashboard from "./AdminDashboard.jsx";
+import VerificationQueue from "./VerificationQueue.jsx";
 import { getUser } from "../utils/auth.js";
 import Policies from "./Policies.jsx";
 import PolicyManagement from "./PolicyManagement.jsx";
@@ -18,6 +22,7 @@ import Forums from "./Forums.jsx";
 import Resources from "./Resources.jsx";
 import CitizenAnalytics from "./CitizenAnalytics.jsx";
 import RepPerformance from "./RepPerformance.jsx";
+import ProtectedRoute from "../components/ProtectedRoute.jsx";
 import PolicyComments from "./PolicyComments.jsx";
 import EventManagement from "./EventManagement.jsx";
 
@@ -25,6 +30,8 @@ const Overview = () => {
   const user = getUser();
   if (user?.role === "representative") {
     return <RepresentativeHome />;
+  } else if (user?.role === "admin") {
+    return <AdminHome />;
   }
   return <CitizenHome />;
 };
@@ -51,6 +58,12 @@ const Dashboard = () => {
         <Route path="my-analytics" element={<CitizenAnalytics />} />
         <Route path="performance" element={<RepPerformance />} />
         <Route path="events" element={<EventManagement />} />
+        
+        {/* Admin routes */}
+        <Route path="admin-dashboard" element={<AdminDashboard />} />
+        <Route path="verification-queue" element={<VerificationQueue />} />
+        <Route path="user-management" element={<ProtectedRoute role="admin"><UserManagement/></ProtectedRoute>} />
+        
         {/* more nested routes */}
       </Route>
     </Routes>

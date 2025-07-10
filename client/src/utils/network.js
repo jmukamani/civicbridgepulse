@@ -1,7 +1,25 @@
 import axios from "axios";
 
-// Determine API base URL: env var or same origin
-export const API_BASE = import.meta.env.VITE_API_BASE || window.location.origin;
+// Determine API base URL: prefer Vite env when available, else fallbacks
+let base = window.location.origin;
+
+// 1. Try process.env (useful for Jest/node tests)
+if (process?.env?.VITE_API_BASE) {
+  base = process.env.VITE_API_BASE;
+}
+
+// 2. Try Vite import.meta.env – but wrap in eval so CommonJS (Jest) parser doesn’t puke
+try {
+  // eslint-disable-next-line no-eval
+  const viteEnv = eval('typeof import!=="undefined" && import.meta && import.meta.env ? import.meta.env : null');
+  if (viteEnv?.VITE_API_BASE) {
+    base = viteEnv.VITE_API_BASE;
+  }
+} catch {
+  // ignore – likely running in a non-Vite environment (e.g., Jest)
+}
+
+export const API_BASE = base;
 
 // 1. Axios default base URL
 axios.defaults.baseURL = API_BASE;

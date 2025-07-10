@@ -21,7 +21,13 @@ const router = express.Router();
 // Helper to generate JWT
 const generateToken = (user) => {
   return jwt.sign(
-    { id: user.id, role: user.role, email: user.email },
+    {
+      id: user.id,
+      role: user.role,
+      email: user.email,
+      county: user.county,
+      ward: user.ward,
+    },
     process.env.JWT_SECRET,
     { expiresIn: "7d" }
   );
@@ -70,7 +76,7 @@ const generateToken = (user) => {
 // Registration
 router.post("/register", async (req, res) => {
   try {
-    const { name, email, password, role, county } = req.body;
+    const { name, email, password, role, county, specializations, verificationDocs } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ message: "All fields are required" });
@@ -82,16 +88,58 @@ router.post("/register", async (req, res) => {
     }
 
     const hashed = await bcrypt.hash(password, 10);
-    const user = await User.create({ name, email, password: hashed, role, county });
+    
+    // Handle different user role registrations
+    let userData = { 
+      name, 
+      email, 
+      password: hashed, 
+      role: role || "citizen", 
+      county 
+    };
 
-    // Send verification email
+    if (role === "representative") {
+      userData.verificationStatus = "pending";
+      userData.isRepVerified = false;
+      userData.specializations = specializations || [];
+      userData.verificationDocs = verificationDocs ? JSON.stringify(verificationDocs) : null;
+    } else if (role === "admin") {
+      // Admin accounts are automatically verified
+      userData.isVerified = true;
+      userData.isRepVerified = true;
+      userData.verificationStatus = "not_required";
+    }
+
+    const user = await User.create(userData);
+
+    // Send verification email (except for admin accounts which are auto-verified)
     const token = generateToken(user);
-    const verifyUrl = `${process.env.CLIENT_URL}/verify?token=${token}`;
+    
+    if (role === "admin") {
+      // Admin accounts don't need email verification
+      user.isVerified = true;
+      await user.save();
+    } else {
+      const verifyUrl = `${process.env.CLIENT_URL}/verify?token=${token}`;
+      let emailMessage = `<p>Hi ${name}, please verify your email by clicking the link below:</p><p><a href="${verifyUrl}">Verify Email</a></p>`;
+      
+      if (role === "representative") {
+        emailMessage += `<p><strong>Note:</strong> As a representative, your account will require admin approval before you can access all features. You will be notified once your account is verified.</p>`;
+      }
 
-    const html = `<p>Hi ${name}, please verify your email by clicking the link below:</p><p><a href="${verifyUrl}">Verify Email</a></p>`;
-    await sendEmail(email, "Verify your email", html);
+      await sendEmail(email, "Verify your email", emailMessage);
+    }
 
-    res.status(201).json({ message: "Registration successful, please check your email" });
+    let responseMessage = "Registration successful";
+    if (role === "admin") {
+      responseMessage += ". Admin account is ready to use.";
+    } else if (role === "representative") {
+      responseMessage += ", please check your email. Representative accounts require admin verification.";
+    } else {
+      responseMessage += ", please check your email";
+    }
+
+    res.status(201).json({ message: responseMessage });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
@@ -182,7 +230,29 @@ router.post("/login", async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
 
-    if (!user.isVerified) return res.status(400).json({ message: "Please verify your email first" });
+    // Check email verification (admin accounts are auto-verified)
+    if (!user.isVerified && user.role !== "admin") {
+      return res.status(400).json({ message: "Please verify your email first" });
+    }
+
+    // Check representative verification status
+    if (user.role === "representative") {
+      if (user.verificationStatus === "pending") {
+        return res.status(400).json({ 
+          message: "Your representative account is pending admin verification. Please wait for approval." 
+        });
+      }
+      if (user.verificationStatus === "rejected") {
+        return res.status(400).json({ 
+          message: "Your representative account has been rejected. Please contact support." 
+        });
+      }
+      if (!user.isRepVerified) {
+        return res.status(400).json({ 
+          message: "Your representative account requires verification. Please contact admin." 
+        });
+      }
+    }
 
     const token = generateToken(user);
     res.json({ token });

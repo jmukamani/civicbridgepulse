@@ -34,6 +34,26 @@ User.init(
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
+    // Representative verification fields
+    isRepVerified: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    verificationStatus: {
+      type: DataTypes.ENUM("pending", "approved", "rejected", "not_required"),
+      defaultValue: "not_required",
+    },
+    verificationDocs: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: "JSON string containing verification document paths and details",
+    },
+    // Representative specialization areas
+    specializations: {
+      type: DataTypes.ARRAY(DataTypes.STRING),
+      defaultValue: [],
+      comment: "Areas of expertise for representatives: water, sanitation, infrastructure, etc.",
+    },
     passwordResetToken: {
       type: DataTypes.STRING,
       allowNull: true,
@@ -57,6 +77,10 @@ User.init(
     gender: {
       type: DataTypes.ENUM("male", "female", "other"),
       allowNull: true,
+    },
+    isActive: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
     },
   },
   {
