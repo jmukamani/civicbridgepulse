@@ -4,16 +4,12 @@ import { CacheFirst, NetworkFirst, StaleWhileRevalidate } from 'workbox-strategi
 import { ExpirationPlugin } from 'workbox-expiration';
 import { keys as idbKeys, get as idbGet, del as idbDel, update as idbUpdate } from 'idb-keyval';
 
-// Get the API base URL - should match the main app's network.js logic
 const getApiBase = () => {
-  // In production, always use the current origin
-  // In development with proxy, also use current origin (proxy will handle /api routes)
   return self.location.origin;
 };
 
 const API_BASE = getApiBase();
 
-// Helper function to check if a URL is an API URL we should cache
 const isApiUrl = (url) => {
   return url.href.startsWith(API_BASE + '/api/') || 
          url.pathname.startsWith('/api/');

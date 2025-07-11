@@ -20,6 +20,7 @@ router.post("/", authenticate(["representative", "admin"]), async (req, res) => 
       category,
       tags: Array.isArray(tags) ? tags : tags?.split?.(",") || [],
       createdBy: req.user.id,
+      county: req.user.county, // Add county field to match fetching logic
     });
     res.status(201).json(resource);
   } catch (err) {
@@ -40,8 +41,13 @@ router.get("/", authenticate(), async (req, res) => {
       where.tags = { [Op.overlap]: arr };
     }
 
-    // County scoping similar to other modules
-    if (req.user.county) where["county"] = req.user.county;
+    // County scoping - include resources with matching county OR no county set
+    if (req.user.county) {
+      where[Op.or] = [
+        { county: req.user.county },
+        { county: null }
+      ];
+    }
 
     if (q) {
       // simple ILIKE, could switch to to_tsquery

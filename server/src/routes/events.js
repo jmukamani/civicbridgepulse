@@ -44,9 +44,15 @@ router.get("/", authenticate(), async (req, res) => {
       where.date = { [Op.gte]: new Date() };
     }
     if (category) where.category = category;
+    
+    // County filtering - include events with matching county OR no county set
     if ((req.user.role === "citizen" || countyOnly === "1") && req.user.county) {
-      where.county = req.user.county;
+      where[Op.or] = [
+        { county: req.user.county },
+        { county: null }
+      ];
     }
+    
     const events = await Event.findAll({
       where,
       order: [["date", "ASC"]],

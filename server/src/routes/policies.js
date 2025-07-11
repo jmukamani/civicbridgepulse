@@ -167,12 +167,22 @@ router.get("/", authenticate(), async (req, res) => {
       where.status = "published";
     }
 
-    // 2) County / ownership scoping
+    // 2) County / ownership scoping - include policies with matching county OR no county set
     const userCounty = req.user.county;
     if (req.user.role === "citizen") {
-      if (userCounty) where.county = userCounty;
+      if (userCounty) {
+        where[Op.or] = [
+          { county: userCounty },
+          { county: null }
+        ];
+      }
     } else if (req.user.role === "representative") {
-      if (userCounty) where.county = userCounty;
+      if (userCounty) {
+        where[Op.or] = [
+          { county: userCounty },
+          { county: null }
+        ];
+      }
     }
 
     // 3) Optional query filters

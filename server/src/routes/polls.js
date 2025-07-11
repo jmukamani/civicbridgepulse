@@ -122,7 +122,14 @@ router.post("/", authenticate("representative"), async (req, res) => {
 router.get("/", authenticate(), async (req, res) => {
   try {
     const where = {};
-    if (req.user.role !== "admin" && req.user.county) where.county = req.user.county;
+    
+    // County filtering - include polls with matching county OR no county set
+    if (req.user.role !== "admin" && req.user.county) {
+      where[Op.or] = [
+        { county: req.user.county },
+        { county: null }
+      ];
+    }
 
     // Citizens only see open polls within schedule
     if (req.user.role === "citizen") {
