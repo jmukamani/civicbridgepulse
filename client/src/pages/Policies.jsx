@@ -418,6 +418,17 @@ const PolicyViewer = () => {
     return `/api/policies/${doc.id}/file?token=${getToken()}`;
   };
 
+  // Detect if user is on mobile device
+  const isMobile = () => {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+           window.innerWidth <= 768;
+  };
+
+  const openDocumentInNewTab = () => {
+    const url = getDocumentDisplayURL();
+    window.open(url, '_blank');
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
@@ -464,48 +475,112 @@ const PolicyViewer = () => {
 
       {/* Document display */}
       {(isOnline || fileAvailable) ? (
-        doc.filePath.toLowerCase().endsWith(".pdf") ? (
-          <iframe
-            src={getDocumentDisplayURL()}
-            className="w-full h-[80vh] border"
-            title="policy-pdf"
-            onError={(e) => {
-              console.error('PDF viewer error:', e);
-              if (!isOnline) {
-                toast.error('PDF not available offline. Please download it first.');
-              }
-            }}
-          />
-        ) : (
-          isFromIndexedDB ? (
-            <div className="w-full h-[80vh] border border-dashed border-gray-300 flex items-center justify-center bg-gray-50">
-              <div className="text-center p-6">
-                <svg className="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        isMobile() ? (
+          // Mobile-optimized document viewing
+          <div className="w-full border rounded-lg bg-white shadow-sm">
+            <div className="p-6 text-center">
+              <div className="mb-4">
+                <svg className="w-16 h-16 mx-auto text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Document Available Offline</h3>
-                <p className="text-gray-500 mb-4">This document is stored locally, but cannot be previewed. You can download it to view with other applications.</p>
-                <a 
-                  href={documentURL} 
-                  download={`${doc.title}.${documentStorage.getFileExtension(doc.mimeType || 'application/pdf')}`}
-                  className="text-indigo-600 hover:text-indigo-800 font-medium"
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">
+                {doc.title}
+              </h3>
+              <p className="text-gray-600 mb-6">
+                {isFromIndexedDB 
+                  ? "This document is available offline and ready to view."
+                  : "Tap below to open the document in your device's viewer."
+                }
+              </p>
+              
+              <div className="space-y-3">
+                {/* Primary action - Open document */}
+                <button
+                  onClick={openDocumentInNewTab}
+                  className="w-full bg-indigo-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-indigo-700 transition-colors"
                 >
-                  Download to view
-                </a>
+                  📄 Open Document
+                </button>
+                
+                {/* Secondary action - Download if from IndexedDB */}
+                {isFromIndexedDB && documentURL && (
+                  <a
+                    href={documentURL}
+                    download={`${doc.title}.${documentStorage.getFileExtension(doc.mimeType || 'application/pdf')}`}
+                    className="block w-full bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+                  >
+                    💾 Download to Device
+                  </a>
+                )}
+                
+                {/* Info about file */}
+                <div className="text-sm text-gray-500 pt-2">
+                  <p>
+                    📱 Mobile tip: Documents open in your device's default viewer
+                  </p>
+                  {isFromIndexedDB && (
+                    <p className="mt-1">
+                      ✅ Available offline
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
-          ) : (
+          </div>
+        ) : (
+          // Desktop iframe viewing (existing logic)
+          doc.filePath.toLowerCase().endsWith(".pdf") ? (
             <iframe
-              title="doc-viewer"
+              src={getDocumentDisplayURL()}
               className="w-full h-[80vh] border"
-              src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(`${API_BASE}/${doc.filePath}`)}`}
+              title="policy-pdf"
               onError={(e) => {
-                console.error('Document viewer error:', e);
+                console.error('PDF viewer error:', e);
                 if (!isOnline) {
-                  toast.error('Document viewer not available offline.');
+                  toast.error('PDF not available offline. Please download it first.');
                 }
               }}
             />
+          ) : (
+            isFromIndexedDB ? (
+              <div className="w-full h-[80vh] border border-dashed border-gray-300 flex items-center justify-center bg-gray-50">
+                <div className="text-center p-6">
+                  <svg className="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Document Available Offline</h3>
+                  <p className="text-gray-500 mb-4">This document is stored locally, but cannot be previewed. You can download it to view with other applications.</p>
+                  <div className="space-y-2">
+                    <button
+                      onClick={openDocumentInNewTab}
+                      className="block w-full bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 font-medium mb-2"
+                    >
+                      Open in New Tab
+                    </button>
+                    <a 
+                      href={documentURL} 
+                      download={`${doc.title}.${documentStorage.getFileExtension(doc.mimeType || 'application/pdf')}`}
+                      className="block w-full bg-gray-100 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-200 font-medium"
+                    >
+                      Download to Computer
+                    </a>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <iframe
+                title="doc-viewer"
+                className="w-full h-[80vh] border"
+                src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(`${API_BASE}/${doc.filePath}`)}`}
+                onError={(e) => {
+                  console.error('Document viewer error:', e);
+                  if (!isOnline) {
+                    toast.error('Document viewer not available offline.');
+                  }
+                }}
+              />
+            )
           )
         )
       ) : (

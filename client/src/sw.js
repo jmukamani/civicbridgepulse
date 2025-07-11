@@ -4,45 +4,24 @@ import { CacheFirst, NetworkFirst, StaleWhileRevalidate } from 'workbox-strategi
 import { ExpirationPlugin } from 'workbox-expiration';
 import { keys as idbKeys, get as idbGet, del as idbDel, update as idbUpdate } from 'idb-keyval';
 
-// Get the API base URL from environment or default to current origin
+// Get the API base URL - should match the main app's network.js logic
 const getApiBase = () => {
-  if (typeof importScripts === 'function') {
-    try {
-      const urlParams = new URLSearchParams(self.location.search);
-      const apiBase = urlParams.get('apiBase');
-      if (apiBase) return apiBase;
-    } catch (e) {}
-  }
-  
-  // Default API base patterns to match
-  const apiPatterns = [
-    self.location.origin,               // current origin first (dev or prod)
-    'http://localhost:5000',            // common local API
-    'https://cap-app-civicbridge.azurewebsites.net' // production fallback
-  ];
-  
-  return apiPatterns;
+  // In production, always use the current origin
+  // In development with proxy, also use current origin (proxy will handle /api routes)
+  return self.location.origin;
 };
 
-const apiBasePatterns = getApiBase();
+const API_BASE = getApiBase();
 
 // Helper function to check if a URL is an API URL we should cache
 const isApiUrl = (url) => {
-  if (Array.isArray(apiBasePatterns)) {
-    return apiBasePatterns.some(pattern => url.href.startsWith(pattern + '/api/'));
-  }
-  return url.href.startsWith(apiBasePatterns + '/api/');
+  return url.href.startsWith(API_BASE + '/api/') || 
+         url.pathname.startsWith('/api/');
 };
 
 // Helper function to check if a URL is a policy file URL we should cache
 const isPolicyFileUrl = (url) => {
-  if (Array.isArray(apiBasePatterns)) {
-    return apiBasePatterns.some(pattern => 
-      url.href.startsWith(pattern + '/uploads/policies/') ||
-      url.href.includes('/uploads/policies/')
-    );
-  }
-  return url.href.startsWith(apiBasePatterns + '/uploads/policies/') ||
+  return url.href.startsWith(API_BASE + '/uploads/policies/') ||
          url.href.includes('/uploads/policies/');
 };
 
@@ -156,13 +135,8 @@ async function handleSync() {
     const { key, type, payload, token, retries=0 } = item;
 
     try {
-      let apiBase;
-      if (Array.isArray(apiBasePatterns)) {
-        // Prefer localhost pattern during development if available
-        apiBase = apiBasePatterns.find(p => p.startsWith('http://localhost')) || apiBasePatterns[0];
-      } else {
-        apiBase = apiBasePatterns;
-      }
+      // Use the same API_BASE logic as the main app
+      const apiBase = API_BASE;
       
       if (type === 'issue') {
         await fetch(`${apiBase}/api/issues`, {
