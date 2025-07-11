@@ -3,7 +3,6 @@ import { getCountdownParts } from "../utils/datetime.js";
 
 const pad = (n) => n.toString().padStart(2, "0");
 
-// Small badge used for each time unit
 const TimeUnit = ({ value, label }) => (
   <span className="bg-gray-800 text-white rounded px-1.5 py-0.5 text-[10px] leading-none flex items-baseline gap-0.5">
     <span className="font-mono font-semibold">{value}</span>

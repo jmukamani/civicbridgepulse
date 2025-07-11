@@ -7,7 +7,6 @@ const ActionMenu = ({ actions, buttonClass = "" }) => {
   const btnRef = useRef(null);
   if (!actions || !actions.length) return null;
 
-  // Render items inside a portal so it's not clipped by parent overflow
   const renderItems = (open) => {
     if (!open || !btnRef.current) return null;
     const rect = btnRef.current.getBoundingClientRect();

@@ -27,12 +27,11 @@ const useSocket = () => {
       socket.on("new_message", (msg) => {
         if (msg.recipientId === user.id) {
           socket.emit("delivered", { messageId: msg.id });
-          notifyInfo("New message received");
+          // Remove duplicate toast notification - the persistent notification system handles this
         }
       });
 
       socket.on("policy_comment", () => {
-        notifyInfo("New feedback on one of your policies");
       });
 
       socket.on("event_new", () => {
@@ -40,7 +39,6 @@ const useSocket = () => {
       });
 
       socket.on("issue_status", ({ issueId, status }) => {
-        notifyInfo(`Issue status updated to ${status.replace(/_/g, " ")}`);
         window.dispatchEvent(new CustomEvent("issue_status", { detail: { issueId, status } }));
       });
     };
@@ -53,7 +51,7 @@ const useSocket = () => {
       }
     };
 
-    // initial connect if online
+
     connect();
 
     // listen to network changes

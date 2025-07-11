@@ -1,7 +1,8 @@
 # CivicBridgePulse Kenya
 
 Deployed application link: https://cap-app-civicbridge.azurewebsites.net/
-Demo video: https://drive.google.com/file/d/1mbPWmBVVdN4kF_yYRu1Kyo1l2IzyJJFV/view?usp=sharing
+Demo video: https://drive.google.com/file/d/1saK-5Us5FDvaqb4KONHRGDYhUCJpw1g-/view?usp=sharing
+Analysis of the Results: https://docs.google.com/document/d/1IqIQjw0-J9Wa_qPn-hfFE5d53dmI1Pj1WjSSbtKrGJE/edit?usp=sharing
 
 
 CivicBridgePulse Kenya (CBP) is a full-stack Progressive Web App that connects **citizens** with their elected **representatives** for transparent governance.  
@@ -382,7 +383,7 @@ This analysis demonstrates that CivicBridgePulse Kenya successfully bridges the 
 * **Offline Synchronization Enhancement**: Advanced conflict resolution and data merging capabilities
 * **Progressive Web App Optimization**: Improved caching strategies and background sync reliability
 
-#### **Phase 2: AI & Intelligence (Q3-Q4 2024)**
+#### **Phase 2: AI & Intelligence**
 * **Natural Language Processing**
   * Automatic categorization of citizen issues and messages
   * Sentiment analysis for policy feedback

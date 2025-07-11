@@ -9,7 +9,6 @@ import FlexSearch from 'flexsearch';
  */
 const db = new Dexie('CBPDB');
 
-// Initial schema (kept for backward-compatibility)
 db.version(1).stores({
   users: 'id, name, email, updatedAt',
   representatives: 'id, userId, name, updatedAt',
@@ -17,7 +16,6 @@ db.version(1).stores({
   messages: '++localId, serverId, repId, userId, createdAt, synced',
 });
 
-// v2 – add preferences, polls, resources, versioned policies
 db.version(2).stores({
   users: 'id, name, email, updatedAt',
   representatives: 'id, userId, name, updatedAt',
@@ -32,7 +30,6 @@ db.version(2).stores({
   return tx.table('policies').toCollection().modify(p => { p.version = 1; });
 });
 
-// v3 – enhanced messages with status + drafts table
 db.version(3).stores({
   users: 'id, name, email, updatedAt',
   representatives: 'id, userId, name, updatedAt',
@@ -44,14 +41,12 @@ db.version(3).stores({
   resources: 'id, title, updatedAt',
   drafts: 'id, threadId, updatedAt',
 }).upgrade(async tx => {
-  // add default status & threadId fields to existing messages if missing
   await tx.table('messages').toCollection().modify(m => {
     if(!m.status) m.status = m.synced ? 'sent' : 'pending';
     if(!('threadId' in m)) m.threadId = null;
   });
 });
 
-// v4 – store extracted text of policies for full-text search
 db.version(4).stores({
   users: 'id, name, email, updatedAt',
   representatives: 'id, userId, name, updatedAt',
