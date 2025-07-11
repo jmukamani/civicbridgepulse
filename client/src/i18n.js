@@ -1,56 +1,41 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
+import en from "./locales/en/translation.json";
+import sw from "./locales/sw/translation.json";
+import { translate } from "./utils/translator.js";
 
-export const resources = {
-  en: {
-    translation: {
-      welcome: "Welcome",
-      login: "Login",
-      register: "Register",
-      email: "Email",
-      password: "Password",
-      name: "Name",
-      logout: "Logout",
-      category: "Category",
-      urgent: "Urgent",
-      policy: "Policy Question",
-      local: "Local Issue",
-      other: "Other",
-      search: "Search",
-      filter: "Filter",
-      public_profile: "Make my profile public (visible to others)",
-      county: "County",
-    },
-  },
-  sw: {
-    translation: {
-      welcome: "Karibu",
-      login: "Ingia",
-      register: "Jiandikishe",
-      email: "Barua pepe",
-      password: "Nenosiri",
-      name: "Jina",
-      logout: "Toka",
-      category: "Kategoria",
-      urgent: "Ya Dharura",
-      policy: "Swali la Sera",
-      local: "Swala la Kijamii",
-      other: "Nyingine",
-      search: "Tafuta",
-      filter: "Chuja",
-      public_profile: "Onyesha wasifu wangu kwa umma (uonwe na wengine)",
-      county: "Kaunti",
-    },
-  },
-};
+// Helper to lazily translate missing keys using Azure Translator and cache them
+async function handleMissingKey(lng, ns, key) {
+  if (lng === 'en') return; // no need to translate for English
+  try {
+    const translated = await translate(key, lng);
+    if (translated) {
+      i18n.addResource(lng, ns, key, translated);
+    }
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn('Failed to translate key', key, err);
+  }
+}
 
-i18n.use(initReactI18next).init({
-  resources,
-  lng: "en",
-  fallbackLng: "en",
-  interpolation: {
-    escapeValue: false,
-  },
-});
+i18n
+  .use(initReactI18next)
+  .init({
+    resources: {
+      en: { translation: en },
+      sw: { translation: sw },
+    },
+    lng: "en",
+    fallbackLng: "en",
+    interpolation: {
+      escapeValue: false,
+    },
+    // When a key is missing in the chosen language, keep the English text & try to fetch translation
+    saveMissing: true,
+    missingKeyHandler: (lngs, ns, key) => {
+      lngs.forEach((lng) => handleMissingKey(lng, ns, key));
+    },
+    keySeparator: false, // allow using English sentence as a key
+  });
 
 export default i18n; 

@@ -30,24 +30,44 @@ const ResourceCard = ({ res, onBookmarkToggle }) => {
   };
 
   return (
-    <li className="border p-3 rounded flex justify-between items-start gap-4">
-      <div>
-        <a href={res.externalUrl || res.fileUrl} target="_blank" rel="noreferrer" className="text-indigo-600 underline font-medium">
-          {res.title}
-        </a>
-        {res.description && <p className="text-xs text-gray-600 mt-1 line-clamp-2">{res.description}</p>}
-        {res.tags?.length > 0 && (
-          <div className="mt-1 flex gap-1 flex-wrap text-xs">
-            {res.tags.map((t) => (
-              <span key={t} className="bg-gray-100 px-1 rounded">
-                #{t}
-              </span>
-            ))}
-          </div>
-        )}
+    <div className="border rounded-lg p-4 bg-white shadow-sm hover:shadow-md transition-shadow">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          <a 
+            href={res.externalUrl || res.fileUrl} 
+            target="_blank" 
+            rel="noreferrer" 
+            className="text-indigo-600 hover:text-indigo-800 underline font-medium text-base md:text-lg block"
+          >
+            {res.title}
+          </a>
+          {res.description && (
+            <p className="text-sm text-gray-600 mt-2 line-clamp-2 leading-relaxed">
+              {res.description}
+            </p>
+          )}
+          {res.tags?.length > 0 && (
+            <div className="mt-3 flex gap-1 flex-wrap">
+              {res.tags.map((t) => (
+                <span key={t} className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
+                  #{t}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+        <button 
+          onClick={toggle} 
+          disabled={processing}
+          className={`flex-shrink-0 text-2xl hover:scale-110 transition-transform ${
+            res.bookmarked ? 'text-yellow-500' : 'text-gray-400'
+          } ${processing ? 'opacity-50 cursor-not-allowed' : 'hover:text-yellow-600'}`}
+          aria-label={res.bookmarked ? "Remove bookmark" : "Add bookmark"}
+        >
+          {res.bookmarked ? "★" : "☆"}
+        </button>
       </div>
-      <button onClick={toggle} disabled={processing}>{res.bookmarked ? "★" : "☆"}</button>
-    </li>
+    </div>
   );
 };
 

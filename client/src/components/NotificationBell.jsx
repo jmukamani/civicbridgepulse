@@ -27,16 +27,23 @@ const NotificationBell = () => {
         )}
       </button>
       {open && (
-        <div className="absolute right-0 mt-2 w-72 bg-white shadow-lg border rounded z-50">
-          <div className="flex items-center justify-between px-3 py-2 border-b">
+        <div className="absolute right-0 mt-2 w-80 sm:w-72 bg-white shadow-lg border rounded-lg z-50 max-w-[calc(100vw-2rem)] sm:max-w-none">
+          <div className="flex items-center justify-between px-4 py-3 border-b">
             <span className="font-semibold text-sm">Notifications</span>
-            <button onClick={handleMarkAll} className="text-xs text-indigo-600">Mark all read</button>
+            <button 
+              onClick={handleMarkAll} 
+              className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+            >
+              Mark all read
+            </button>
           </div>
           <ul className="max-h-80 overflow-auto divide-y">
             {notifications.map((n) => (
               <li
                 key={n.id}
-                className={`px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 ${n.read ? "bg-white" : "bg-indigo-50"}`}
+                className={`px-4 py-3 text-sm cursor-pointer hover:bg-gray-100 transition-colors ${
+                  n.read ? "bg-white" : "bg-indigo-50"
+                }`}
                 onClick={() => {
                   let target = null;
                   if (n.type === "message" && n.data?.senderId) {
@@ -49,14 +56,21 @@ const NotificationBell = () => {
                   setOpen(false);
                 }}
               >
-                <p className="font-medium">{n.title}</p>
-                <p className="text-xs text-gray-600 line-clamp-2">{n.body}</p>
-                <p className="text-[10px] text-gray-400 mt-0.5">{formatDateTime(n.createdAt)}</p>
+                <p className="font-medium text-gray-900">{n.title}</p>
+                <p className="text-xs text-gray-600 line-clamp-2 mt-1">{n.body}</p>
+                <p className="text-[10px] text-gray-400 mt-1">{formatDateTime(n.createdAt)}</p>
               </li>
             ))}
-            {notifications.length === 0 && <p className="p-3 text-center text-sm">No notifications</p>}
+            {notifications.length === 0 && (
+              <div className="p-6 text-center">
+                <p className="text-sm text-gray-500">No notifications</p>
+              </div>
+            )}
           </ul>
-          <button onClick={() => loadMore()} className="w-full text-center text-xs py-1 text-indigo-600 hover:bg-gray-50">
+          <button 
+            onClick={() => loadMore()} 
+            className="w-full text-center text-xs py-3 text-indigo-600 hover:bg-gray-50 font-medium border-t"
+          >
             Load more
           </button>
         </div>

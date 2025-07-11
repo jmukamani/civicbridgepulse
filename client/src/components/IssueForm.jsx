@@ -64,37 +64,39 @@ const IssueForm = ({ onCreated }) => {
   };
 
   return (
-    <form className="space-y-4 bg-white p-4 rounded shadow" onSubmit={submit}>
-      <h2 className="text-lg font-bold">Report an Issue</h2>
+    <form className="space-y-4 md:space-y-6 bg-white p-4 md:p-6 rounded-lg shadow" onSubmit={submit}>
+      <h2 className="text-lg md:text-xl font-bold">Report an Issue</h2>
       <div>
-        <label className="block text-sm font-medium">Title</label>
+        <label className="block text-sm font-medium mb-2">Title</label>
         <input
           type="text"
           name="title"
           value={form.title}
           onChange={handleChange}
           required
-          className="mt-1 w-full border rounded px-2 py-1"
+          className="w-full border border-gray-300 rounded-md px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          placeholder="Brief description of the issue"
         />
       </div>
       <div>
-        <label className="block text-sm font-medium">Description</label>
+        <label className="block text-sm font-medium mb-2">Description</label>
         <textarea
           name="description"
           value={form.description}
           onChange={handleChange}
           required
           rows={4}
-          className="mt-1 w-full border rounded px-2 py-1"
+          className="w-full border border-gray-300 rounded-md px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none"
+          placeholder="Provide detailed information about the issue..."
         />
       </div>
       <div>
-        <label className="block text-sm font-medium">Category</label>
+        <label className="block text-sm font-medium mb-2">Category</label>
         <select
           name="category"
           value={form.category}
           onChange={handleChange}
-          className="mt-1 w-full border rounded px-2 py-1"
+          className="w-full border border-gray-300 rounded-md px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
         >
           <option value="infrastructure">Infrastructure</option>
           <option value="service">Service</option>
@@ -104,21 +106,22 @@ const IssueForm = ({ onCreated }) => {
         </select>
       </div>
       <div>
-        <label className="block text-sm font-medium">Location (area name)</label>
+        <label className="block text-sm font-medium mb-2">Location (area name)</label>
         <input
           type="text"
           name="location"
           value={form.location}
           onChange={handleChange}
-          className="mt-1 w-full border rounded px-2 py-1"
+          className="w-full border border-gray-300 rounded-md px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          placeholder="e.g. Kibera, Westlands, etc."
         />
       </div>
       <button
         type="submit"
         disabled={loading}
-        className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 disabled:opacity-50"
+        className="w-full bg-indigo-600 text-white px-4 py-3 rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors"
       >
-        {loading ? "Submitting..." : "Report"}
+        {loading ? "Submitting..." : "Report Issue"}
       </button>
     </form>
   );

@@ -1,3 +1,76 @@
 @tailwind base;
 @tailwind components;
-@tailwind utilities; 
+@tailwind utilities;
+
+@layer base {
+  /* Improve mobile touch targets */
+  button, a {
+    @apply min-h-[44px] md:min-h-[auto];
+  }
+  
+  /* Better mobile typography */
+  body {
+    @apply text-base leading-relaxed;
+  }
+  
+  /* Improve mobile table handling */
+  .table-responsive {
+    @apply overflow-x-auto;
+  }
+}
+
+@layer components {
+  /* Mobile-friendly form inputs */
+  .form-input {
+    @apply w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm;
+    @apply focus:outline-none focus:ring-indigo-500 focus:border-indigo-500;
+    @apply text-base; /* Prevents zoom on iOS */
+  }
+  
+  /* Mobile-friendly buttons */
+  .btn {
+    @apply inline-flex items-center justify-center px-4 py-2 border border-transparent;
+    @apply text-sm font-medium rounded-md shadow-sm min-h-[44px];
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
+  }
+  
+  .btn-primary {
+    @apply bg-indigo-600 text-white hover:bg-indigo-700;
+    @apply focus:ring-indigo-500;
+  }
+  
+  .btn-secondary {
+    @apply bg-white text-gray-700 border-gray-300 hover:bg-gray-50;
+    @apply focus:ring-indigo-500;
+  }
+  
+  /* Mobile-friendly cards */
+  .card {
+    @apply bg-white rounded-lg shadow-sm border p-4 md:p-6;
+  }
+  
+  /* Responsive text sizing */
+  .text-responsive-lg {
+    @apply text-lg md:text-xl lg:text-2xl;
+  }
+  
+  .text-responsive-base {
+    @apply text-sm md:text-base;
+  }
+  
+  /* Mobile-friendly spacing */
+  .section-spacing {
+    @apply py-6 md:py-8 lg:py-12;
+  }
+  
+  .container-responsive {
+    @apply max-w-full mx-auto px-4 sm:px-6 lg:px-8;
+  }
+}
+
+/* Mobile safari viewport fix */
+@supports (-webkit-touch-callout: none) {
+  .h-screen {
+    height: -webkit-fill-available;
+  }
+} 

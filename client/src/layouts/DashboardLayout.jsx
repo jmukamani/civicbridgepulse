@@ -17,9 +17,9 @@ const DashboardLayout = () => {
       <Navigation isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Content */}
-      <div className="flex flex-col flex-1 overflow-y-auto">
+      <div className="flex flex-col flex-1 overflow-hidden">
         <Header onToggleSidebar={toggleSidebar} />
-        <main className="p-6 flex-1">
+        <main className="p-3 md:p-6 flex-1 overflow-y-auto">
           <Outlet />
         </main>
       </div>

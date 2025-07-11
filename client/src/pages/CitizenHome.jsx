@@ -6,6 +6,9 @@ import CountdownTimer from "../components/CountdownTimer.jsx";
 import axios from "axios";
 import ResourceCard from "../components/ResourceCard.jsx";
 import { API_BASE } from "../utils/network.js";
+import useOnlineStatus from "../hooks/useOnlineStatus.js";
+import documentStorage from "../utils/documentStorage.js";
+import { DocumentIcon, CloudArrowDownIcon } from "@heroicons/react/24/outline";
 
 // Convert snake_case status into "Title Case" with spaces
 const formatStatus = (str) =>
@@ -14,6 +17,23 @@ const formatStatus = (str) =>
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(" ");
 
+// StatCard component with optional onClick
+const StatCard = ({ title, value, icon, note, onClick }) => (
+  <div 
+    className={`bg-white p-6 rounded-lg shadow flex items-center gap-4 ${onClick ? 'cursor-pointer hover:shadow-md transition-shadow' : ''}`}
+    onClick={onClick}
+  >
+    <div className="h-10 w-10 flex items-center justify-center rounded-full bg-indigo-50 text-indigo-600 text-xl">
+      {icon}
+    </div>
+    <div>
+      <p className="text-sm text-gray-500 mb-1">{title}</p>
+      <p className="text-2xl font-bold text-gray-900">{value}</p>
+      {note && <p className="text-xs text-green-600 mt-1">{note}</p>}
+    </div>
+  </div>
+);
+
 const CitizenHome = () => {
   const user = getUser();
   const [issues, setIssues] = useState([]);
@@ -21,6 +41,8 @@ const CitizenHome = () => {
   const [threads, setThreads] = useState([]);
   const [events, setEvents] = useState([]);
   const [recentResources, setRecentResources] = useState([]);
+  const [offlineStats, setOfflineStats] = useState({ count: 0, totalSizeMB: 0 });
+  const online = useOnlineStatus();
 
   useEffect(() => {
     const load = async () => {
@@ -51,6 +73,15 @@ const CitizenHome = () => {
 
         const resRecent = await axios.get(`${API_BASE}/api/resources?recent=true`, tokenHeader);
         setRecentResources(resRecent.data.slice(0, 5));
+
+        // Load offline document stats
+        try {
+          const stats = await documentStorage.getStorageStats();
+          setOfflineStats(stats);
+        } catch (error) {
+          console.warn('Failed to load offline stats:', error);
+        }
+
       } catch (err) {
         console.error(err);
       }
@@ -70,7 +101,13 @@ const CitizenHome = () => {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">Welcome, {user?.name}</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold">Welcome, {user?.name}</h2>
+        <div className="flex items-center gap-2 text-sm">
+          <div className={`w-2 h-2 rounded-full ${online ? 'bg-green-400' : 'bg-red-400'}`}></div>
+          <span className="text-gray-600">{online ? 'Online' : 'Offline'}</span>
+        </div>
+      </div>
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -150,6 +187,48 @@ const CitizenHome = () => {
         <h3 className="font-semibold mb-2">Civic Score</h3>
         <p className="text-5xl font-bold text-green-600">{civicScore}</p>
         <p className="text-sm text-gray-500">Engagement level indicator</p>
+      </div>
+
+      {/* Stat cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          title="My Issues"
+          value={issues.length}
+          icon={<span>🔧</span>}
+          note={`${issues.filter((i) => i.status === "resolved").length} resolved`}
+        />
+        <StatCard
+          title="Active Polls"
+          value={polls.length}
+          icon={<span>📊</span>}
+          note={polls.length ? (
+            (() => {
+              const nextPoll = polls.find(p => new Date(p.endsAt) > new Date());
+              if (nextPoll) {
+                const diffDays = Math.ceil((new Date(nextPoll.endsAt) - new Date()) / (1000 * 60 * 60 * 24));
+                return `Next ends in ${diffDays} day${diffDays === 1 ? "" : "s"}`;
+              }
+              return "no active polls";
+            })()
+          ) : (
+            "none"
+          )}
+        />
+        <StatCard
+          title="Recent Discussions"
+          value={threads.length}
+          icon={<span>💬</span>}
+          note={threads.length ? `${threads.filter((t) => new Date(t.createdAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length} this week` : "none"}
+        />
+        
+        {/* Offline Documents Card */}
+        <StatCard
+          title="Offline Documents"
+          value={offlineStats.count}
+          icon={<DocumentIcon className="h-5 w-5 text-indigo-600" />}
+          note={offlineStats.count > 0 ? `${offlineStats.totalSizeMB} MB stored` : "No documents downloaded"}
+          onClick={() => window.location.href = '/dashboard/policies'}
+        />
       </div>
     </div>
   );

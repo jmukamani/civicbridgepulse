@@ -3,9 +3,12 @@ import axios from "axios";
 import { getToken, getUser } from "../utils/auth.js";
 import { Link, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import BudgetChart from "../components/BudgetChart.jsx";
+import DocumentDownloadManager from "../components/DocumentDownloadManager.jsx";
+import OfflineDocumentIndicator from "../components/OfflineDocumentIndicator.jsx";
 import { toast } from "react-toastify";
 import { formatDistanceToNow } from "date-fns";
 import { API_BASE } from "../utils/network.js";
+import documentStorage from "../utils/documentStorage.js";
 
 const PolicyList = () => {
   const [docs, setDocs] = useState([]);
@@ -75,16 +78,16 @@ const PolicyList = () => {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
         <h2 className="text-2xl font-bold">Policies</h2>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search projects"
-            className="border px-3 py-2 rounded flex-1"
+            className="border px-3 py-2 rounded w-full sm:w-auto"
           />
-          <select value={category} onChange={(e) => setCategory(e.target.value)} className="border px-2 py-2">
+          <select value={category} onChange={(e) => setCategory(e.target.value)} className="border px-2 py-2 rounded w-full sm:w-auto">
             <option value="">All</option>
             <option value="infrastructure">Infrastructure</option>
             <option value="education">Education</option>
@@ -97,49 +100,103 @@ const PolicyList = () => {
           </select>
         </div>
       </div>
-      {/* Table header */}
-      <div className="grid grid-cols-12 text-xs font-semibold text-gray-500 px-4 py-2 border-b">
-        <div className="col-span-4 md:col-span-4">POLICY</div>
-        <div className="col-span-2">CATEGORY</div>
-        <div className="col-span-2">STATUS</div>
-        <div className="col-span-2">LAST UPDATE</div>
-        {user?.role === 'citizen' && <div className="col-span-2 text-center">ACTION</div>}
-      </div>
-      {docs.map((d) => (
-        <div
-          key={d.id}
-          className="grid grid-cols-12 items-center px-4 py-3 border-b hover:bg-gray-50 text-sm"
-        >
-          {/* Icon + title */}
-          <Link to={`view/${d.id}`} className="col-span-4 md:col-span-4 flex items-start gap-4">
-            <div className="h-10 w-10 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 text-xl font-bold">
-              {d.title.charAt(0)}
-            </div>
-            <div>
-              <p className="font-medium text-gray-900 leading-none">{d.title}</p>
-              <p className="text-xs text-gray-500">{d.subtitle || d.department || d.category}</p>
-            </div>
-          </Link>
-          {/* Category tag */}
-          <div className="col-span-2">
-            <span className={`text-xs px-2 py-1 rounded-full ${tagClasses('category', d.category)}`}>{d.category}</span>
-          </div>
-          {/* Status tag */}
-          <div className="col-span-2">
-            <span className={`text-xs px-2 py-1 rounded-full capitalize ${tagClasses('status', d.status)}`}>{d.status?.replace('_', ' ')}</span>
-          </div>
-          {/* Last update */}
-          <div className="col-span-2 text-gray-500 text-xs">
-            {formatDistanceToNow(new Date(d.updatedAt), { addSuffix: true })}
-          </div>
-          {user?.role === 'citizen' && (
-            <div className="col-span-2 flex justify-center">
-              <Link to={`view/${d.id}#comments`} className="text-indigo-600 text-xs hover:underline">Add Feedback</Link>
-            </div>
-          )}
+      
+      {/* Desktop Table View - Hidden on mobile */}
+      <div className="hidden md:block">
+        {/* Table header */}
+        <div className="grid grid-cols-12 text-xs font-semibold text-gray-500 px-4 py-2 border-b">
+          <div className="col-span-3">POLICY</div>
+          <div className="col-span-2">CATEGORY</div>
+          <div className="col-span-2">STATUS</div>
+          <div className="col-span-2">OFFLINE STATUS</div>
+          <div className="col-span-1">LAST UPDATE</div>
+          {user?.role === 'citizen' && <div className="col-span-2 text-center">ACTION</div>}
         </div>
-      ))}
-      {docs.length === 0 && <p className="text-gray-500 mt-4 text-sm">No projects found</p>}
+        {docs.map((d) => (
+          <div
+            key={d.id}
+            className="grid grid-cols-12 items-center px-4 py-3 border-b hover:bg-gray-50 text-sm"
+          >
+            {/* Icon + title */}
+            <Link to={`view/${d.id}`} className="col-span-3 flex items-start gap-4">
+              <div className="h-10 w-10 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 text-xl font-bold">
+                {d.title.charAt(0)}
+              </div>
+              <div>
+                <p className="font-medium text-gray-900 leading-none">{d.title}</p>
+                <p className="text-xs text-gray-500">{d.subtitle || d.department || d.category}</p>
+              </div>
+            </Link>
+            {/* Category tag */}
+            <div className="col-span-2">
+              <span className={`text-xs px-2 py-1 rounded-full ${tagClasses('category', d.category)}`}>{d.category}</span>
+            </div>
+            {/* Status tag */}
+            <div className="col-span-2">
+              <span className={`text-xs px-2 py-1 rounded-full capitalize ${tagClasses('status', d.status)}`}>{d.status?.replace('_', ' ')}</span>
+            </div>
+            {/* Offline status */}
+            <div className="col-span-2">
+              <OfflineDocumentIndicator policyId={d.id} />
+            </div>
+            {/* Last update */}
+            <div className="col-span-1 text-gray-500 text-xs">
+              {formatDistanceToNow(new Date(d.updatedAt), { addSuffix: true })}
+            </div>
+            {user?.role === 'citizen' && (
+              <div className="col-span-2 flex justify-center">
+                <Link to={`view/${d.id}#comments`} className="text-indigo-600 text-xs hover:underline">Add Feedback</Link>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Mobile Card View - Hidden on desktop */}
+      <div className="md:hidden space-y-3">
+        {docs.map((d) => (
+          <div key={d.id} className="bg-white border rounded-lg p-4 shadow-sm">
+            <Link to={`view/${d.id}`} className="block">
+              <div className="flex items-start gap-3 mb-3">
+                <div className="h-12 w-12 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 text-lg font-bold flex-shrink-0">
+                  {d.title.charAt(0)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-gray-900 text-base leading-tight">{d.title}</p>
+                  {(d.subtitle || d.department || d.category) && (
+                    <p className="text-sm text-gray-500 mt-1">{d.subtitle || d.department || d.category}</p>
+                  )}
+                </div>
+              </div>
+            </Link>
+            
+            <div className="flex flex-wrap gap-2 mb-3">
+              <span className={`text-xs px-2 py-1 rounded-full ${tagClasses('category', d.category)}`}>
+                {d.category}
+              </span>
+              <span className={`text-xs px-2 py-1 rounded-full capitalize ${tagClasses('status', d.status)}`}>
+                {d.status?.replace('_', ' ')}
+              </span>
+            </div>
+
+            {/* Mobile offline status */}
+            <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
+              <OfflineDocumentIndicator policyId={d.id} />
+              <span>Updated {formatDistanceToNow(new Date(d.updatedAt), { addSuffix: true })}</span>
+            </div>
+            
+            <div className="flex items-center justify-between">
+              {user?.role === 'citizen' && (
+                <Link to={`view/${d.id}#comments`} className="text-indigo-600 hover:underline font-medium text-sm">
+                  Add Feedback
+                </Link>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {docs.length === 0 && <p className="text-gray-500 mt-4 text-sm text-center">No projects found</p>}
     </div>
   );
 };
@@ -152,6 +209,8 @@ const PolicyViewer = () => {
   const [lang, setLang] = useState('en');
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [fileAvailable, setFileAvailable] = useState(false);
+  const [documentURL, setDocumentURL] = useState(null);
+  const [isFromIndexedDB, setIsFromIndexedDB] = useState(false);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -169,56 +228,134 @@ const PolicyViewer = () => {
   useEffect(() => {
     const fetchDoc = async () => {
       try {
-        const res = await axios.get(`${API_BASE}/api/policies/${id}`, {
-          headers: { Authorization: `Bearer ${getToken()}` },
-        });
-        setDoc(res.data);
+        let documentData = null;
+        let hasIndexedDBFile = false;
+
+        // First try to get from IndexedDB
+        const cachedMetadata = await documentStorage.getMetadata(id);
         
-        // Update local storage cache
-        const saved = JSON.parse(localStorage.getItem("policies_cache")) || [];
-        const updatedSaved = saved.filter(d => d.id !== res.data.id);
-        updatedSaved.push(res.data);
-        localStorage.setItem("policies_cache", JSON.stringify(updatedSaved));
-        
-        // Check if file is available (cached or online)
-        if (res.data.filePath) {
-          await checkFileAvailability(res.data.filePath);
+        if (cachedMetadata) {
+          console.log('Found cached metadata:', cachedMetadata);
+          // Use cached metadata
+          documentData = cachedMetadata;
+          hasIndexedDBFile = await checkIndexedDBFile(id);
+        }
+
+        // Also try to fetch fresh data if online
+        if (isOnline) {
+          try {
+            const res = await axios.get(`${API_BASE}/api/policies/${id}`, {
+              headers: { Authorization: `Bearer ${getToken()}` },
+            });
+            documentData = res.data;
+            
+            // Update local storage cache
+            const saved = JSON.parse(localStorage.getItem("policies_cache")) || [];
+            const updatedSaved = saved.filter(d => d.id !== res.data.id);
+            updatedSaved.push(res.data);
+            localStorage.setItem("policies_cache", JSON.stringify(updatedSaved));
+            
+            // Check if file is available (cached or online)
+            if (res.data.filePath) {
+              await checkFileAvailability(res.data.id);
+            }
+          } catch (onlineError) {
+            console.warn('Online fetch failed, using cached data if available:', onlineError);
+            if (!documentData) {
+              throw onlineError;
+            }
+          }
+        } else if (!documentData) {
+          // Offline and no cached metadata, try localStorage fallback
+          const cached = JSON.parse(localStorage.getItem("policies_cache")) || [];
+          const found = cached.find((d) => d.id == id);
+          if (found) {
+            documentData = found;
+            if (found.filePath) {
+              await checkFileAvailability(found.id);
+            }
+          } else {
+            throw new Error('Policy not found in any cache');
+          }
+        } else if (!isOnline && hasIndexedDBFile) {
+          // We're offline but have both metadata and file in IndexedDB
+          console.log('Using offline IndexedDB data');
+        }
+
+        // Set the document data
+        if (documentData) {
+          setDoc(documentData);
+          
+          // If we haven't checked IndexedDB file yet and we have filePath, do it now
+          if (!hasIndexedDBFile && documentData.filePath) {
+            await checkFileAvailability(documentData.id || id);
+          }
         }
       } catch (err) {
-        console.warn('Failed to fetch from API, trying offline cache:', err);
-        // offline: look in localStorage
-        const cached = JSON.parse(localStorage.getItem("policies_cache")) || [];
-        const found = cached.find((d) => d.id === id);
-        if (found) {
-          setDoc(found);
-          if (found.filePath) {
-            await checkFileAvailability(found.filePath);
-          }
-        } else {
-          console.error('Policy not found in cache:', err);
-          toast.error('Policy not available offline. Please check your connection.');
-        }
+        console.error('Failed to fetch policy:', err);
+        toast.error('Policy not available offline. Please check your connection.');
       }
     };
     fetchDoc();
-  }, [id]);
+  }, [id, isOnline]);
 
-  const checkFileAvailability = async (filePath) => {
+  const checkIndexedDBFile = async (policyId) => {
     try {
+      console.log('Checking IndexedDB for policy:', policyId);
+      const cachedDoc = await documentStorage.getDocument(policyId);
+      console.log('Cached document found:', !!cachedDoc);
+      
+      if (cachedDoc) {
+        console.log('Creating document URL from blob...');
+        const url = await documentStorage.createDocumentURL(policyId);
+        console.log('Document URL created:', !!url);
+        
+        if (url) {
+          setDocumentURL(url);
+          setFileAvailable(true);
+          setIsFromIndexedDB(true);
+          console.log('IndexedDB document is ready for viewing');
+          return true;
+        } else {
+          console.warn('Failed to create URL from cached document');
+        }
+      }
+      return false;
+    } catch (error) {
+      console.error('Failed to check IndexedDB:', error);
+      return false;
+    }
+  };
+
+  const checkFileAvailability = async (policyId) => {
+    try {
+      // First check IndexedDB
+      const fromIndexedDB = await checkIndexedDBFile(policyId);
+      if (fromIndexedDB) return;
+
+      // Then check Cache API (legacy)
+      const token = getToken();
+      const absoluteUrl = `${API_BASE}/api/policies/${policyId}/file?token=${token}`;
+      const relativeUrl = `/api/policies/${policyId}/file?token=${token}`;
+
       if ('caches' in window) {
-        const cache = await caches.open('policy-files');
-        const cachedResponse = await cache.match(`${API_BASE}/${filePath}`);
+        let cachedResponse = await caches.match(absoluteUrl);
+        if (!cachedResponse) {
+          cachedResponse = await caches.match(relativeUrl);
+        }
         if (cachedResponse) {
           setFileAvailable(true);
+          setIsFromIndexedDB(false);
           return;
         }
       }
-      
-      // If not cached but we're online, try to fetch it directly to verify
+
+      // If not cached but we're online, try to fetch directly to verify availability
       if (isOnline) {
         try {
-          const response = await fetch(`${API_BASE}/${filePath}`, { method: 'HEAD' });
+          const response = await fetch(absoluteUrl, { method: 'HEAD' });
           setFileAvailable(response.ok);
+          setIsFromIndexedDB(false);
         } catch (fetchError) {
           console.warn('File fetch test failed:', fetchError);
           setFileAvailable(false);
@@ -229,6 +366,22 @@ const PolicyViewer = () => {
     } catch (error) {
       console.warn('Error checking file availability:', error);
       setFileAvailable(isOnline);
+    }
+  };
+
+  // Cleanup blob URL when component unmounts or doc changes
+  useEffect(() => {
+    return () => {
+      if (documentURL) {
+        URL.revokeObjectURL(documentURL);
+      }
+    };
+  }, [documentURL]);
+
+  const handleDownloadComplete = () => {
+    // Refresh file availability after download
+    if (doc?.filePath) {
+      checkFileAvailability(doc.id);
     }
   };
 
@@ -253,16 +406,41 @@ const PolicyViewer = () => {
     );
   }
 
+  const getDocumentDisplayURL = () => {
+    if (isFromIndexedDB && documentURL) {
+      return documentURL;
+    }
+    
+    if (isOnline) {
+      return `${API_BASE}/api/policies/${doc.id}/file?token=${getToken()}`;
+    }
+    
+    return `/api/policies/${doc.id}/file?token=${getToken()}`;
+  };
+
   return (
     <div>
-      <button onClick={() => navigate(-1)} className="text-indigo-600 mb-4">← Back</button>
+      <div className="flex items-center justify-between mb-4">
+        <button onClick={() => navigate(-1)} className="text-indigo-600">← Back</button>
+        
+        {/* Download Manager */}
+        <DocumentDownloadManager 
+          policyId={doc.id || doc.policyId} 
+          policyData={doc} 
+          onDownloadComplete={handleDownloadComplete}
+        />
+      </div>
+
       <h2 className="text-2xl font-bold mb-2">{doc.title}</h2>
       <div className="mb-4 text-sm text-gray-600">{doc.category} · {new Date(doc.createdAt).toLocaleDateString()}</div>
+      
       <div className="mb-4">
         <button onClick={()=>setLang('en')} className={`mr-2 ${lang==='en'?'font-bold':''}`}>EN</button>
         <button onClick={()=>setLang('sw')} className={lang==='sw'?'font-bold':''}>SW</button>
       </div>
+      
       <p className="mb-4">{lang==='en'?doc.summary_en:doc.summary_sw}</p>
+      
       {doc.budget && (
         <div className="mb-6">
           <h4 className="font-semibold mb-2">Budget Breakdown</h4>
@@ -277,37 +455,58 @@ const PolicyViewer = () => {
             <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
             </svg>
-            <p>You're offline. {fileAvailable ? 'Showing cached document.' : 'Document may not display properly.'}</p>
+            <p>You're offline. {fileAvailable ? 
+              (isFromIndexedDB ? 'Showing document from offline storage.' : 'Showing cached document.') : 
+              'Document may not display properly.'}</p>
           </div>
         </div>
       )}
-      
+
       {/* Document display */}
-      {fileAvailable ? (
+      {(isOnline || fileAvailable) ? (
         doc.filePath.toLowerCase().endsWith(".pdf") ? (
-          <embed
-            src={`${API_BASE}/${doc.filePath}`}
-            type="application/pdf"
+          <iframe
+            src={getDocumentDisplayURL()}
             className="w-full h-[80vh] border"
+            title="policy-pdf"
             onError={(e) => {
-              console.error('PDF embed error:', e);
+              console.error('PDF viewer error:', e);
               if (!isOnline) {
-                toast.error('PDF not available offline. Please connect to internet.');
+                toast.error('PDF not available offline. Please download it first.');
               }
             }}
           />
         ) : (
-          <iframe
-            title="doc-viewer"
-            className="w-full h-[80vh] border"
-            src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(`${API_BASE}/${doc.filePath}`)}`}
-            onError={(e) => {
-              console.error('Document viewer error:', e);
-              if (!isOnline) {
-                toast.error('Document viewer not available offline.');
-              }
-            }}
-          />
+          isFromIndexedDB ? (
+            <div className="w-full h-[80vh] border border-dashed border-gray-300 flex items-center justify-center bg-gray-50">
+              <div className="text-center p-6">
+                <svg className="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Document Available Offline</h3>
+                <p className="text-gray-500 mb-4">This document is stored locally, but cannot be previewed. You can download it to view with other applications.</p>
+                <a 
+                  href={documentURL} 
+                  download={`${doc.title}.${documentStorage.getFileExtension(doc.mimeType || 'application/pdf')}`}
+                  className="text-indigo-600 hover:text-indigo-800 font-medium"
+                >
+                  Download to view
+                </a>
+              </div>
+            </div>
+          ) : (
+            <iframe
+              title="doc-viewer"
+              className="w-full h-[80vh] border"
+              src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(`${API_BASE}/${doc.filePath}`)}`}
+              onError={(e) => {
+                console.error('Document viewer error:', e);
+                if (!isOnline) {
+                  toast.error('Document viewer not available offline.');
+                }
+              }}
+            />
+          )
         )
       ) : (
         <div className="w-full h-[80vh] border border-dashed border-gray-300 flex items-center justify-center bg-gray-50">
@@ -316,9 +515,9 @@ const PolicyViewer = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             <h3 className="text-lg font-medium text-gray-900 mb-2">Document Unavailable Offline</h3>
-            <p className="text-gray-500 mb-4">This document isn't cached for offline viewing.</p>
+            <p className="text-gray-500 mb-4">This document isn't downloaded for offline viewing.</p>
             {!isOnline && (
-              <p className="text-sm text-gray-400">Connect to internet to view the full document.</p>
+              <p className="text-sm text-gray-400">Connect to internet to download or view the document.</p>
             )}
             {isOnline && (
               <button 
@@ -400,7 +599,6 @@ const prefetchFiles = async (docs) => {
   if (!('caches' in window)) return;
   
   try {
-    const fileCache = await caches.open('policy-files');
     const apiCache = await caches.open('external-api-cache');
     const token = getToken();
     
@@ -413,19 +611,28 @@ const prefetchFiles = async (docs) => {
     const cachePromises = docs.map(async (d) => {
       const promises = [];
       
-      // Cache the file if it exists (files usually don't need auth)
+      // Cache the file via the authenticated endpoint (requires token)
       if (d.filePath) {
         promises.push(
-          fetch(`${API_BASE}/${d.filePath}`)
-            .then(response => {
-              if (response.ok) {
-                return fileCache.put(`${API_BASE}/${d.filePath}`, response);
-              }
-              throw new Error(`Failed to fetch file: ${response.status}`);
-            })
-            .catch(err => {
-              console.warn(`Failed to cache file ${d.filePath}:`, err);
-            })
+          (async () => {
+            try {
+              const token = getToken();
+              if (!token) return;
+
+              const absoluteUrl = `${API_BASE}/api/policies/${d.id}/file?token=${token}`;
+              const relativeUrl = `/api/policies/${d.id}/file?token=${token}`;
+
+              const response = await fetch(absoluteUrl);
+              if (!response.ok) throw new Error(`Failed to fetch file: ${response.status}`);
+
+              await apiCache.put(absoluteUrl, response.clone());
+              // Store relative URL in local-api-cache so same-origin offline requests can fetch it
+              const localCache = await caches.open('local-api-cache');
+              await localCache.put(relativeUrl, response.clone());
+            } catch (err) {
+              console.warn(`Failed to cache file for policy ${d.id}:`, err);
+            }
+          })()
         );
       }
       

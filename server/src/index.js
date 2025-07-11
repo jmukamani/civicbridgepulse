@@ -15,6 +15,7 @@ import analyticsRoutes from "./routes/analytics.js";
 import resourcesRoutes from "./routes/resources.js";
 import notificationsRoutes from "./routes/notifications.js";
 import adminRoutes from "./routes/admin.js";
+import translateRoutes from "./routes/translate.js";
 import swaggerUi from "swagger-ui-express";
 import swaggerSpec from "./swagger.js";
 import eventsRoutes from "./routes/events.js";
@@ -66,6 +67,7 @@ app.use("/api/resources", resourcesRoutes);
 app.use("/api/notifications", notificationsRoutes);
 app.use("/api/events", eventsRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/translate", translateRoutes);
 
 // Swagger docs endpoints
 app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
