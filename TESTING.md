@@ -47,7 +47,7 @@ JWT_SECRET=test_jwt_secret_key_for_testing_only
 # Test Database Configuration
 DB_HOST=localhost
 DB_USER=postgres
-DB_PASSWORD=your_postgres_password
+DB_PASSWORD=postgres
 DB_NAME=civicbridgepulse_test
 
 # Test Email Configuration

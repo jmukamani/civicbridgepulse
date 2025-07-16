@@ -140,4 +140,22 @@ router.patch("/profile", authenticate(), async (req, res) => {
   }
 });
 
+// TEST-ONLY: Auto-verify a user by email (for e2e tests)
+if (process.env.NODE_ENV !== 'production') {
+  router.post('/verify-test-user', async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) return res.status(400).json({ message: 'Email is required' });
+      const user = await User.findOne({ where: { email } });
+      if (!user) return res.status(404).json({ message: 'User not found' });
+      user.isVerified = true;
+      await user.save();
+      res.json({ message: 'User verified for test', user: { id: user.id, email: user.email, isVerified: user.isVerified } });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+}
+
 export default router; 

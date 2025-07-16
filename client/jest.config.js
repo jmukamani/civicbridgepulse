@@ -7,6 +7,7 @@ export default {
   transform: {
     '^.+\\.(js|jsx)$': 'babel-jest'
   },
+  extensionsToTreatAsEsm: ['.jsx'],
   testMatch: [
     '<rootDir>/src/**/__tests__/**/*.(js|jsx)',
     '<rootDir>/src/**/*.(test|spec).(js|jsx)'

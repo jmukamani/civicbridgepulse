@@ -171,3 +171,8 @@ const localStorageMock = {
 };
 
 global.localStorage = localStorageMock; 
+
+
+jest.mock('../utils/network.js', () => ({
+  API_BASE: 'http://localhost:3000'
+})); 
