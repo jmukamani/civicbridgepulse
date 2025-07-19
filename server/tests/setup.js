@@ -63,6 +63,11 @@ afterAll(async () => {
   }
 });
 
+// Mock email sending to avoid real emails and external errors during tests
+jest.mock('../src/utils/email', () => ({
+  sendEmail: jest.fn().mockResolvedValue(true)
+}));
+
 // Global test utilities
 global.testUtils = {
   createTestUser: async (userData = {}) => {

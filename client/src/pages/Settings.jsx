@@ -13,6 +13,103 @@ const Settings = () => {
   return <CitizenSettings initial={user} />;
 };
 
+const DeleteAccountSection = () => {
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [password, setPassword] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+  const navigate = useNavigate();
+  const { t } = useTranslation();
+
+  const handleDeleteAccount = async (e) => {
+    e.preventDefault();
+    
+    if (!password.trim()) {
+      toast.error("Please enter your password");
+      return;
+    }
+
+    if (!window.confirm(t('delete_account_confirm'))) {
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      await axios.delete(`${API_BASE}/api/users/account`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+        data: { password }
+      });
+      
+      toast.success(t('account_deleted'));
+      removeToken();
+      navigate("/");
+    } catch (err) {
+      console.error(err);
+      if (err.response?.status === 400) {
+        toast.error(err.response.data.message || t('invalid_password'));
+      } else {
+        toast.error(t('delete_account_failed'));
+      }
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteModal(false);
+      setPassword("");
+    }
+  };
+
+  return (
+    <div className="bg-white p-4 rounded shadow border-l-4 border-red-500">
+      <h3 className="text-lg font-semibold text-red-700 mb-2">{t('delete_account')}</h3>
+      <p className="text-sm text-gray-600 mb-3">
+        {t('delete_account_warning')}
+      </p>
+      
+      {!showDeleteModal ? (
+        <button
+          onClick={() => setShowDeleteModal(true)}
+          className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm transition-colors"
+        >
+          {t('delete_account')}
+        </button>
+      ) : (
+        <form onSubmit={handleDeleteAccount} className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {t('enter_password_confirm')}
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Your password"
+              className="w-full border border-gray-300 px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-red-500"
+              required
+            />
+          </div>
+          <div className="flex space-x-2">
+            <button
+              type="submit"
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white px-4 py-2 rounded text-sm transition-colors"
+            >
+              {isDeleting ? t('deleting') : t('confirm_delete')}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowDeleteModal(false);
+                setPassword("");
+              }}
+              className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded text-sm transition-colors"
+            >
+              {t('cancel')}
+            </button>
+          </div>
+        </form>
+      )}
+    </div>
+  );
+};
+
 const CitizenSettings = ({ initial }) => {
   const [form, setForm] = useState({ name: initial.name, county: initial.county || "", ward: initial.ward || "", ageRange: initial.ageRange || "", gender: initial.gender || "", isPublic: initial.isPublic ?? true });
   const { t } = useTranslation();
@@ -73,6 +170,7 @@ const CitizenSettings = ({ initial }) => {
           Sign out
         </button>
       </div>
+      <DeleteAccountSection />
     </div>
   );
 };
@@ -127,6 +225,7 @@ const RepSettings = ({ initial }) => {
           Sign out
         </button>
       </div>
+      <DeleteAccountSection />
     </div>
   );
 };

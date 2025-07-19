@@ -2,6 +2,7 @@ import express from "express";
 import { authenticate } from "../middleware/auth.js";
 import User from "../models/User.js";
 import { Op } from "sequelize";
+import bcrypt from "bcryptjs";
 
 const router = express.Router();
 
@@ -134,6 +135,65 @@ router.patch("/profile", authenticate(), async (req, res) => {
     Object.assign(user, data);
     await user.save();
     res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+/**
+ * @swagger
+ * /api/users/account:
+ *   delete:
+ *     summary: Delete current user's account
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - password
+ *             properties:
+ *               password:
+ *                 type: string
+ *                 description: User's password for confirmation
+ *     responses:
+ *       200:
+ *         description: Account deleted successfully
+ *       400:
+ *         description: Invalid password
+ *       500:
+ *         description: Server error
+ */
+
+// Delete own account
+router.delete("/account", authenticate(), async (req, res) => {
+  try {
+    const { password } = req.body;
+    
+    if (!password) {
+      return res.status(400).json({ message: "Password is required for account deletion" });
+    }
+
+    const user = await User.findByPk(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Verify password before deletion
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Invalid password" });
+    }
+
+    // Delete the user account
+    await user.destroy();
+    
+    res.json({ message: "Account deleted successfully" });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });

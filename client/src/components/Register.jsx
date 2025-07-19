@@ -4,10 +4,16 @@ import axios from "axios";
 import { useTranslation } from "react-i18next";
 import { API_BASE } from "../utils/network.js";
 import { notifySuccess } from "../utils/toast.js";
+import PasswordInput from "./PasswordInput.jsx";
+import PrivacyPolicy from "./PrivacyPolicy.jsx";
 
 const Register = () => {
-  const [form, setForm] = useState({ name: "", email: "", password: "", role: "citizen", county: "" });
+  const [form, setForm] = useState({ name: "", email: "", password: "", confirmPassword: "", role: "citizen", county: "" });
   const [specializations, setSpecializations] = useState([]);
+  const [privacyPolicyAgreed, setPrivacyPolicyAgreed] = useState(false);
+  const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
+  const [showResendOption, setShowResendOption] = useState(false);
+  const [isResending, setIsResending] = useState(false);
   
   // Fallback specializations in case API call fails
   const fallbackSpecializations = [
@@ -65,9 +71,24 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Validate password confirmation
+    if (form.password !== form.confirmPassword) {
+      setError(t("passwords_must_match"));
+      setShowResendOption(false);
+      return;
+    }
+    
+    // Validate privacy policy agreement
+    if (!privacyPolicyAgreed) {
+      setError(t("privacy_policy_required"));
+      setShowResendOption(false);
+      return;
+    }
+    
     // Validate representative specializations
     if (form.role === "representative" && specializations.length === 0) {
       setError("Representatives must select at least one area of specialization");
+      setShowResendOption(false);
       return;
     }
     
@@ -91,8 +112,38 @@ const Register = () => {
       return; // stop further execution
        
     } catch (err) {
-      setError(err.response?.data?.message || "Registration failed");
+      const errorMessage = err.response?.data?.message || "Registration failed";
+      setError(errorMessage);
       setSuccess(null);
+      
+      // Show resend option for specific errors
+      if (errorMessage.includes("Email already exists") || 
+          errorMessage.includes("verify your email first") ||
+          errorMessage.includes("Please verify your email")) {
+        setShowResendOption(true);
+      } else {
+        setShowResendOption(false);
+      }
+    }
+  };
+
+  const handleResendVerification = async () => {
+    setIsResending(true);
+    setError(null);
+    setSuccess(null);
+    
+    try {
+      const res = await axios.post(`${API_BASE}/api/auth/resend-verification`, {
+        email: form.email
+      });
+      
+      setSuccess(res.data.message || t("verification_sent"));
+      notifySuccess(res.data.message || t("verification_sent"));
+      setShowResendOption(false);
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to resend verification email");
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -105,6 +156,22 @@ const Register = () => {
         <h2 className="text-2xl font-bold mb-6 text-center">{t("register")}</h2>
         {error && <p className="text-red-500 mb-4 text-sm">{error}</p>}
         {success && <p className="text-green-600 mb-4 text-sm">{success}</p>}
+        
+        {showResendOption && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+            <p className="text-sm text-blue-800 mb-2">
+              It looks like you may have already registered with this email. Would you like us to resend the verification email?
+            </p>
+            <button
+              type="button"
+              onClick={handleResendVerification}
+              disabled={isResending}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+            >
+              {isResending ? "Sending..." : t("resend_verification")}
+            </button>
+          </div>
+        )}
         <div className="mb-4">
           <label className="block mb-2 text-sm font-medium">{t("name")}</label>
           <input
@@ -130,13 +197,21 @@ const Register = () => {
         </div>
         <div className="mb-4">
           <label className="block mb-2 text-sm font-medium">{t("password")}</label>
-          <input
+          <PasswordInput
             name="password"
-            type="password"
             value={form.password}
             onChange={handleChange}
-            className="w-full border border-gray-300 px-3 py-2 rounded-md text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
             placeholder="Choose a strong password"
+            required
+          />
+        </div>
+        <div className="mb-4">
+          <label className="block mb-2 text-sm font-medium">{t("confirm_password")}</label>
+          <PasswordInput
+            name="confirmPassword"
+            value={form.confirmPassword}
+            onChange={handleChange}
+            placeholder="Confirm your password"
             required
           />
         </div>
@@ -199,6 +274,29 @@ const Register = () => {
             </p>
           </div>
         )}
+        
+        <div className="mb-6">
+          <label className="flex items-start cursor-pointer">
+            <input
+              type="checkbox"
+              checked={privacyPolicyAgreed}
+              onChange={(e) => setPrivacyPolicyAgreed(e.target.checked)}
+              className="mt-1 mr-3 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              required
+            />
+            <span className="text-sm text-gray-700">
+              {t("privacy_policy_agreement")}{" "}
+              <button
+                type="button"
+                onClick={() => setShowPrivacyPolicy(true)}
+                className="text-indigo-600 hover:text-indigo-800 underline font-medium"
+              >
+                {t("view_privacy_policy")}
+              </button>
+            </span>
+          </label>
+        </div>
+        
         <button
           type="submit"
           className="w-full bg-indigo-600 text-white py-3 rounded-md hover:bg-indigo-700 font-medium text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors"
@@ -209,6 +307,11 @@ const Register = () => {
           {t("login")}? <Link to="/login" className="text-indigo-600 hover:text-indigo-800 font-medium">{t("login")}</Link>
         </p>
       </form>
+      
+      <PrivacyPolicy 
+        isOpen={showPrivacyPolicy} 
+        onClose={() => setShowPrivacyPolicy(false)} 
+      />
     </div>
   );
 };

@@ -1,6 +1,6 @@
-const bcrypt = require("bcrypt");
-const sequelize = require("./src/config/db.js").default;
-const User = require("./src/models/User.js").default;
+import bcrypt from "bcryptjs";
+import sequelize from "./src/config/db.js";
+import User from "./src/models/User.js";
 
 async function createAdmin() {
   try {
@@ -11,7 +11,7 @@ async function createAdmin() {
     // Admin user details
     const adminData = {
       name: "System Administrator",
-      email: "admin@civicbridge.ke",
+      email: "julietmukamani19@gmail.com",
       password: await bcrypt.hash("admin123", 10),
       role: "admin",
       county: "Nairobi",
@@ -40,7 +40,7 @@ async function createAdmin() {
     }
 
     console.log("\n🔑 Admin Login Credentials:");
-    console.log("Email: admin@civicbridge.ke");
+    console.log("Email: julietmukamani19@gmail.com");
     console.log("Password: admin123");
     console.log("\n📍 Access admin dashboard at: http://localhost:5173/dashboard/admin-dashboard");
     

@@ -176,3 +176,10 @@ global.localStorage = localStorageMock;
 jest.mock('../utils/network.js', () => ({
   API_BASE: 'http://localhost:3000'
 })); 
+
+// Mock i18next/react-i18next to suppress i18n warnings in tests
+jest.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: (key) => key, i18n: { changeLanguage: jest.fn() } }),
+  initReactI18next: { type: '3rdParty', init: jest.fn() },
+  Trans: ({ children }) => children,
+})); 

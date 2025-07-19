@@ -2,20 +2,24 @@ import { Routes, Route, Navigate, Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import Login from "./components/Login.jsx";
 import Register from "./components/Register.jsx";
+import ForgotPassword from "./components/ForgotPassword.jsx";
+import ResetPassword from "./components/ResetPassword.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Landing from "./pages/Landing.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import VerifyEmail from "./components/VerifyEmail.jsx";
 import useOnlineStatus from "./hooks/useOnlineStatus.js";
 import useLocalSync from "./hooks/useLocalSync.js";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
+import PrivacyPolicy from "./components/PrivacyPolicy.jsx";
 
 const App = () => {
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
   const location = useLocation();
   const onLanding = location.pathname === "/";
   const online = useOnlineStatus();
+  const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
   useLocalSync();
 
   useEffect(() => {
@@ -38,10 +42,16 @@ const App = () => {
           CivicBridgePulse Kenya
         </Link>
         <div className="flex items-center gap-4">
-        <div>
+          <div>
             <button onClick={() => changeLanguage("en")} className="mr-2">EN</button>
-          <button onClick={() => changeLanguage("sw")}>SW</button>
+            <button onClick={() => changeLanguage("sw")}>SW</button>
           </div>
+          <button
+            onClick={() => setShowPrivacyPolicy(true)}
+            className="text-white hover:text-indigo-200 text-sm underline"
+          >
+            {t("privacy_policy")}
+          </button>
           {onLanding && (
             <>
               <Link
@@ -63,6 +73,8 @@ const App = () => {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route
           path="/dashboard/*"
           element={
@@ -75,6 +87,11 @@ const App = () => {
         <Route path="/" element={<Landing />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
+      
+      <PrivacyPolicy 
+        isOpen={showPrivacyPolicy} 
+        onClose={() => setShowPrivacyPolicy(false)} 
+      />
     </div>
   );
 };

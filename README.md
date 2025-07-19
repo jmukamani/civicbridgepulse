@@ -32,6 +32,8 @@ Citizens can report issues, follow policies, join polls, converse directly with 
 * Direct messaging with representatives (delivery / read receipts)
 * Receive push-style toasts for new replies, events & policy updates
 * Offline usage – report issues / send messages / view cached data
+* Secure password management with visibility toggle and reset functionality
+* Privacy policy agreement with comprehensive data protection compliance
 
 ### Representatives
 * Dashboard with live stats (issues, policies, polls, events)

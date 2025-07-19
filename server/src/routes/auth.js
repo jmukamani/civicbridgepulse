@@ -189,6 +189,65 @@ router.get("/verify", async (req, res) => {
 
 /**
  * @swagger
+ * /api/auth/resend-verification:
+ *   post:
+ *     summary: Resend verification email
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *     responses:
+ *       200:
+ *         description: Verification email sent successfully
+ *       400:
+ *         description: Email not found or already verified
+ *       500:
+ *         description: Server error
+ */
+
+// Resend verification email
+router.post("/resend-verification", async (req, res) => {
+  const { email } = req.body;
+  try {
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
+      return res.status(400).json({ message: "Email not found" });
+    }
+
+    if (user.isVerified) {
+      return res.status(400).json({ message: "Email is already verified" });
+    }
+
+    // Generate new verification token
+    const token = generateToken(user);
+    const verifyUrl = `${process.env.CLIENT_URL}/verify?token=${token}`;
+    
+    let emailMessage = `<p>Hi ${user.name}, please verify your email by clicking the link below:</p><p><a href="${verifyUrl}">Verify Email</a></p>`;
+    
+    if (user.role === "representative") {
+      emailMessage += `<p><strong>Note:</strong> As a representative, your account will require admin approval before you can access all features. You will be notified once your account is verified.</p>`;
+    }
+
+    await sendEmail(email, "Verify your email", emailMessage);
+
+    res.json({ message: "Verification email sent successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+/**
+ * @swagger
  * /api/auth/login:
  *   post:
  *     summary: User login
