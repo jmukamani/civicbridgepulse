@@ -34,7 +34,7 @@ const PrivacyPolicy = ({ isOpen, onClose }) => {
             <section className="mb-6">
               <h3 className="text-lg font-semibold mb-3">Introduction</h3>
               <p className="text-gray-700 mb-4">
-                {t("privacy_policy_introduction")} We are registered with the Office of the Data Protection Commissioner under registration number [Insert Registration Number].
+                {t("privacy_policy_introduction")}
               </p>
             </section>
 
