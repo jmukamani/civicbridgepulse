@@ -114,10 +114,13 @@ class DocumentStorage {
    */
   async storeMetadata(policyId, policyData) {
     await this.ensureReady();
-    
+    const numericId = parseInt(policyId);
+    if (!numericId || isNaN(numericId)) {
+      throw new Error(`Invalid policyId for IndexedDB: ${policyId}`);
+    }
     const metadata = {
-      policyId: parseInt(policyId),
-      id: policyData.id || parseInt(policyId), // Ensure id is preserved
+      policyId: numericId,
+      id: (policyData.id && !isNaN(Number(policyData.id))) ? Number(policyData.id) : numericId, // Ensure id is a valid number
       title: policyData.title,
       category: policyData.category,
       status: policyData.status,
@@ -131,7 +134,6 @@ class DocumentStorage {
       subtitle: policyData.subtitle,
       cachedAt: new Date().toISOString()
     };
-
     const transaction = this.db.transaction([METADATA_STORE], 'readwrite');
     const store = transaction.objectStore(METADATA_STORE);
     await store.put(metadata);
