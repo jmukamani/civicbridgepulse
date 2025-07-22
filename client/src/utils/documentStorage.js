@@ -53,47 +53,38 @@ class DocumentStorage {
 
   /**
    * Download and store a policy document
+   * Always fetches from backend API, never directly from Azure Blob Storage
    */
   async downloadDocument(policyId, policyData, token, onProgress) {
     await this.ensureReady();
-    
     try {
       // First, store metadata
       await this.storeMetadata(policyId, policyData);
-      
-      // Download the actual document
+      // Always use backend API endpoint for download
       const fileUrl = `/api/policies/${policyId}/file?token=${token}`;
       const response = await fetch(fileUrl);
-      
       if (!response.ok) {
         throw new Error(`Failed to download document: ${response.status}`);
       }
-
       const contentLength = response.headers.get('Content-Length');
       const total = contentLength ? parseInt(contentLength, 10) : 0;
       let loaded = 0;
-
       // Read response with progress tracking
       const reader = response.body.getReader();
       const chunks = [];
-
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        
         chunks.push(value);
         loaded += value.length;
-        
         if (onProgress && total > 0) {
           onProgress(Math.round((loaded / total) * 100));
         }
       }
-
       // Combine chunks into blob
       const blob = new Blob(chunks, { 
         type: response.headers.get('Content-Type') || 'application/pdf' 
       });
-
       // Store in IndexedDB
       const documentData = {
         id: `doc_${policyId}`,
@@ -104,17 +95,14 @@ class DocumentStorage {
         downloadDate: new Date().toISOString(),
         fileName: `${policyData.title}.${this.getFileExtension(blob.type)}`
       };
-
       const transaction = this.db.transaction([STORE_NAME], 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
       await store.put(documentData);
-
       return {
         success: true,
         size: blob.size,
         fileName: documentData.fileName
       };
-
     } catch (error) {
       console.error('Failed to download document:', error);
       throw error;
