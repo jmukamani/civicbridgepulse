@@ -47,7 +47,7 @@ const DocumentDownloadManager = ({ policyId, policyData, onDownloadComplete }) =
       );
 
       setIsCached(true);
-      toast.success(`Document downloaded for offline access! (${(result.size / 1024 / 1024).toFixed(1)} MB)`);
+      toast.success(`Document downloaded for offline access! (${(result.size / 1024 / 1024).toFixed(1)} MB)`, { toastId: `download-${policyId}` });
       
       if (onDownloadComplete) {
         onDownloadComplete(result);

@@ -8,9 +8,7 @@ services:
       - "4000:4000"
     depends_on:
       - db
-    volumes:
-      # Persist uploaded files between container restarts
-      - uploads:/app/server/uploads
+    # No volume needed for policy uploads (now in Azure)
 
   db:
     image: postgres:16

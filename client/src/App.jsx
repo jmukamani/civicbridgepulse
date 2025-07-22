@@ -42,10 +42,6 @@ const App = () => {
           CivicBridgePulse Kenya
         </Link>
         <div className="flex items-center gap-4">
-          <div>
-            <button onClick={() => changeLanguage("en")} className="mr-2">EN</button>
-            <button onClick={() => changeLanguage("sw")}>SW</button>
-          </div>
           <button
             onClick={() => setShowPrivacyPolicy(true)}
             className="text-white hover:text-indigo-200 text-sm underline"

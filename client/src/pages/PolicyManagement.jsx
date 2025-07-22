@@ -33,6 +33,8 @@ const PolicyManagement = () => {
   const [editDoc, setEditDoc] = useState(null);
   const [budgetText, setBudgetText] = useState("");
   const navigate = useNavigate();
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
 
   const fetchDocs = async () => {
     const res = await axios.get(`${API_BASE}/api/policies`, {
@@ -51,9 +53,19 @@ const PolicyManagement = () => {
     if (summaryEn) fd.append("summary_en", summaryEn);
     if (summarySw) fd.append("summary_sw", summarySw);
     if (budgetText) fd.append("budget", budgetText);
+
+    setIsUploading(true);
+    setUploadProgress(0);
+
     try {
       const res = await axios.post(`${API_BASE}/api/policies/upload`, fd, {
         headers: { Authorization: `Bearer ${getToken()}` },
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            setUploadProgress(percent);
+          }
+        }
       });
       setTitle("");
       setSummaryEn("");
@@ -62,8 +74,7 @@ const PolicyManagement = () => {
       setError("");
       setBudgetText("");
       fetchDocs();
-      toast.success("Uploaded");
-
+      toast.success("Uploaded", { toastId: "policy-upload" });
       // Cache the uploaded file for offline access
       if ('serviceWorker' in navigator && 'caches' in window) {
         try {
@@ -75,6 +86,9 @@ const PolicyManagement = () => {
       }
     } catch (err) {
       setError(err.response?.data?.message || "Upload failed");
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -220,6 +234,16 @@ const PolicyManagement = () => {
         />
         <input type="file" onChange={(e) => setFile(e.target.files[0])} className="mb-2" />
         {error && <p className="text-red-600 mb-2">{error}</p>}
+        {/* Upload Progress Bar */}
+        {isUploading && (
+          <div className="w-full bg-gray-200 rounded h-4 mb-2 relative">
+            <div
+              className="bg-indigo-600 h-4 rounded"
+              style={{ width: `${uploadProgress}%` }}
+            ></div>
+            <span className="absolute left-1/2 top-0 text-xs text-gray-700" style={{transform: 'translateX(-50%)'}}>{uploadProgress}%</span>
+          </div>
+        )}
         <button onClick={upload} className="bg-indigo-600 text-white px-4 py-2 rounded">Upload</button>
       </div>
 

@@ -116,16 +116,15 @@ const CitizenSettings = ({ initial }) => {
   const navigate = useNavigate();
   const submit = async (e) => {
     e.preventDefault();
+    console.log("Submitting profile update", form);
     try {
       await fetch(`${API_BASE}/api/users/profile`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
         body: JSON.stringify(form),
       });
-      toast.success("Profile updated");
-    } catch (err) {
-      toast.error("Failed");
-    }
+      toast.success("Saved", { toastId: "profile-update" });
+    } catch (err) { toast.error("Failed"); }
   };
   const change = (e) => {
     const { name, value, type, checked } = e.target;

@@ -7,6 +7,16 @@ import PolicyDocument from "../models/PolicyDocument.js";
 import { Op } from "sequelize";
 import { extractText, generateSummary, translateToSwahili } from "../utils/policyProcessing.js";
 import { logInteraction } from "../utils/logInteraction.js";
+import { BlobServiceClient } from "@azure/storage-blob";
+
+// Azure Blob Storage config from environment variables
+const AZURE_BLOB_CONNECTION_STRING = process.env.AZURE_BLOB_CONNECTION_STRING;
+const AZURE_BLOB_CONTAINER = process.env.AZURE_BLOB_CONTAINER || "policies";
+
+// Create the BlobServiceClient using the connection string
+const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_BLOB_CONNECTION_STRING);
+// Get a reference to the container client
+const containerClient = blobServiceClient.getContainerClient(AZURE_BLOB_CONTAINER);
 
 const router = express.Router();
 
@@ -29,7 +39,9 @@ const storage = multer.diskStorage({
     cb(null, unique + path.extname(file.originalname));
   },
 });
-const upload = multer({ storage });
+
+// Use Multer memory storage for Azure upload
+const upload = multer({ storage: multer.memoryStorage() });
 
 /**
  * @swagger
@@ -82,8 +94,24 @@ router.post("/upload", authenticate(["representative", "admin"]), upload.single(
   try {
     let { title, category = "other", summary_en = "", summary_sw = "", status = "published", budget } = req.body;
     if (!req.file) return res.status(400).json({ message: "file required" });
+    // Upload to Azure Blob Storage
+    const uniqueName = Date.now() + "-" + Math.round(Math.random() * 1e9) + path.extname(req.file.originalname);
+    const blockBlobClient = containerClient.getBlockBlobClient(uniqueName);
+    await blockBlobClient.uploadData(req.file.buffer, {
+      blobHTTPHeaders: { blobContentType: req.file.mimetype }
+    });
+    const azureUrl = blockBlobClient.url;
+    // Extract text for summary
     if (!summary_en) {
-      const text = await extractText(req.file.path, req.file.mimetype);
+      // Save file temporarily for text extraction
+      const tmpDir = path.join("C:", "tmp");
+      if (!fs.existsSync(tmpDir)) {
+        fs.mkdirSync(tmpDir, { recursive: true });
+      }
+      const tmpPath = path.join(tmpDir, uniqueName);
+      fs.writeFileSync(tmpPath, req.file.buffer);
+      const text = await extractText(tmpPath, req.file.mimetype);
+      fs.unlinkSync(tmpPath);
       if (text) {
         summary_en = generateSummary(text);
       }
@@ -101,7 +129,7 @@ router.post("/upload", authenticate(["representative", "admin"]), upload.single(
       summary_sw,
       status,
       budget: budget ? JSON.parse(budget) : null,
-      filePath: req.file.path.replace(/\\/g, "/"),
+      filePath: azureUrl, // Store Azure URL
       uploadedBy: req.user.id,
       county: req.user.county || null,
     });
@@ -270,6 +298,11 @@ router.get("/:id/file", authenticate(), async (req, res) => {
   const doc = await PolicyDocument.findByPk(req.params.id);
   if (!doc) return res.sendStatus(404);
   if (doc.status !== "published" && req.user.role === "citizen") return res.sendStatus(403);
+  // If filePath is an Azure URL, redirect
+  if (doc.filePath.startsWith("http")) {
+    return res.redirect(doc.filePath);
+  }
+  // Fallback for legacy local files
   res.sendFile(path.resolve(doc.filePath));
 });
 
@@ -279,12 +312,24 @@ router.delete("/:id", authenticate(["representative", "admin"]), async (req, res
     const id = req.params.id;
     const doc = await PolicyDocument.findByPk(id);
     if (!doc) return res.status(404).json({ message: "Policy not found" });
-    // remove file from disk if exists
-    if (doc.filePath && fs.existsSync(doc.filePath)) {
-      try {
-        fs.unlinkSync(doc.filePath);
-      } catch (e) {
-        console.error("File delete error", e);
+    // remove file from Azure or disk if exists
+    if (doc.filePath) {
+      if (doc.filePath.startsWith("http")) {
+        // Azure Blob delete
+        try {
+          const urlParts = doc.filePath.split("/");
+          const blobName = urlParts[urlParts.length - 1];
+          const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+          await blockBlobClient.deleteIfExists();
+        } catch (e) {
+          console.error("Azure file delete error", e);
+        }
+      } else if (fs.existsSync(doc.filePath)) {
+        try {
+          fs.unlinkSync(doc.filePath);
+        } catch (e) {
+          console.error("File delete error", e);
+        }
       }
     }
     await doc.destroy();
@@ -351,11 +396,23 @@ router.post("/bulk-delete", authenticate(["representative", "admin"]), async (re
 
     // Delete files and db rows
     for (const d of docs) {
-      if (d.filePath && fs.existsSync(d.filePath)) {
-        try {
-          fs.unlinkSync(d.filePath);
-        } catch (e) {
-          console.error("File delete error", e);
+      if (d.filePath) {
+        if (d.filePath.startsWith("http")) {
+          // Azure Blob delete
+          try {
+            const urlParts = d.filePath.split("/");
+            const blobName = urlParts[urlParts.length - 1];
+            const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+            await blockBlobClient.deleteIfExists();
+          } catch (e) {
+            console.error("Azure file delete error", e);
+          }
+        } else if (fs.existsSync(d.filePath)) {
+          try {
+            fs.unlinkSync(d.filePath);
+          } catch (e) {
+            console.error("File delete error", e);
+          }
         }
       }
       await d.destroy();

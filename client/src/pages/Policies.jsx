@@ -410,11 +410,13 @@ const PolicyViewer = () => {
     if (isFromIndexedDB && documentURL) {
       return documentURL;
     }
-    
+    // If filePath is an Azure URL, use it directly
+    if (isOnline && doc.filePath && doc.filePath.startsWith("http")) {
+      return doc.filePath;
+    }
     if (isOnline) {
       return `${API_BASE}/api/policies/${doc.id}/file?token=${getToken()}`;
     }
-    
     return `/api/policies/${doc.id}/file?token=${getToken()}`;
   };
 
@@ -445,12 +447,14 @@ const PolicyViewer = () => {
       <h2 className="text-2xl font-bold mb-2">{doc.title}</h2>
       <div className="mb-4 text-sm text-gray-600">{doc.category} · {new Date(doc.createdAt).toLocaleDateString()}</div>
       
-      <div className="mb-4">
+      {/* Remove the language switcher UI from the PolicyViewer component */}
+      {/* <div className="mb-4">
         <button onClick={()=>setLang('en')} className={`mr-2 ${lang==='en'?'font-bold':''}`}>EN</button>
         <button onClick={()=>setLang('sw')} className={lang==='sw'?'font-bold':''}>SW</button>
-      </div>
+      </div> */}
       
-      <p className="mb-4">{lang==='en'?doc.summary_en:doc.summary_sw}</p>
+      {/* And always show the English summary */}
+      <p className="mb-4">{doc.summary_en}</p>
       
       {doc.budget && (
         <div className="mb-6">
@@ -572,7 +576,7 @@ const PolicyViewer = () => {
               <iframe
                 title="doc-viewer"
                 className="w-full h-[80vh] border"
-                src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(`${API_BASE}/${doc.filePath}`)}`}
+                src={getDocumentDisplayURL()}
                 onError={(e) => {
                   console.error('Document viewer error:', e);
                   if (!isOnline) {
