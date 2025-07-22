@@ -87,8 +87,8 @@ class DocumentStorage {
       });
       // Store in IndexedDB
       const documentData = {
-        id: `doc_${policyId}`,
-        policyId: parseInt(policyId),
+        id: `doc_${String(policyId)}`,
+        policyId: String(policyId),
         blob: blob,
         mimeType: blob.type,
         size: blob.size,
@@ -114,13 +114,12 @@ class DocumentStorage {
    */
   async storeMetadata(policyId, policyData) {
     await this.ensureReady();
-    const numericId = parseInt(policyId);
-    if (!numericId || isNaN(numericId)) {
+    if (!policyId || typeof policyId !== 'string') {
       throw new Error(`Invalid policyId for IndexedDB: ${policyId}`);
     }
     const metadata = {
-      policyId: numericId,
-      id: (policyData.id && !isNaN(Number(policyData.id))) ? Number(policyData.id) : numericId, // Ensure id is a valid number
+      policyId: String(policyId),
+      id: policyData.id ? String(policyData.id) : String(policyId),
       title: policyData.title,
       category: policyData.category,
       status: policyData.status,
@@ -150,13 +149,14 @@ class DocumentStorage {
     const index = store.index('policyId');
     
     return new Promise((resolve, reject) => {
-      const numericId = parseInt(policyId);
-      console.log('Looking for document with policyId:', numericId);
-      
-      const request = index.get(numericId);
+      if (!policyId || typeof policyId !== 'string') {
+        console.warn('Invalid policyId for IndexedDB lookup:', policyId);
+        resolve(null);
+        return;
+      }
+      const request = index.get(String(policyId));
       request.onsuccess = () => {
         const result = request.result;
-        console.log('Document lookup result:', !!result);
         resolve(result);
       };
       request.onerror = () => {
@@ -176,7 +176,12 @@ class DocumentStorage {
     const store = transaction.objectStore(METADATA_STORE);
     
     return new Promise((resolve, reject) => {
-      const request = store.get(parseInt(policyId));
+      if (!policyId || typeof policyId !== 'string') {
+        console.warn('Invalid policyId for IndexedDB lookup:', policyId);
+        resolve(null);
+        return;
+      }
+      const request = store.get(String(policyId));
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
@@ -223,14 +228,18 @@ class DocumentStorage {
     const metaStore = transaction.objectStore(METADATA_STORE);
     
     const docIndex = docStore.index('policyId');
-    const docRequest = docIndex.get(parseInt(policyId));
-    
     return new Promise((resolve, reject) => {
+      if (!policyId || typeof policyId !== 'string') {
+        console.warn('Invalid policyId for IndexedDB delete:', policyId);
+        resolve(false);
+        return;
+      }
+      const docRequest = docIndex.get(String(policyId));
       docRequest.onsuccess = () => {
         const doc = docRequest.result;
         if (doc) {
           docStore.delete(doc.id);
-          metaStore.delete(parseInt(policyId));
+          metaStore.delete(String(policyId));
         }
         resolve(true);
       };
