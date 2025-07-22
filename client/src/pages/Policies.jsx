@@ -232,13 +232,14 @@ const PolicyViewer = () => {
         let hasIndexedDBFile = false;
 
         // First try to get from IndexedDB
-        const cachedMetadata = await documentStorage.getMetadata(id);
-        
-        if (cachedMetadata) {
-          console.log('Found cached metadata:', cachedMetadata);
-          // Use cached metadata
-          documentData = cachedMetadata;
-          hasIndexedDBFile = await checkIndexedDBFile(id);
+        if (id && !isNaN(Number(id))) {
+          const cachedMetadata = await documentStorage.getMetadata(id);
+          if (cachedMetadata) {
+            console.log('Found cached metadata:', cachedMetadata);
+            // Use cached metadata
+            documentData = cachedMetadata;
+            hasIndexedDBFile = await checkIndexedDBFile(id);
+          }
         }
 
         // Also try to fetch fresh data if online
@@ -248,13 +249,13 @@ const PolicyViewer = () => {
               headers: { Authorization: `Bearer ${getToken()}` },
             });
             documentData = res.data;
-            
+
             // Update local storage cache
             const saved = JSON.parse(localStorage.getItem("policies_cache")) || [];
             const updatedSaved = saved.filter(d => d.id !== res.data.id);
             updatedSaved.push(res.data);
             localStorage.setItem("policies_cache", JSON.stringify(updatedSaved));
-            
+
             // Check if file is available (cached or online)
             if (res.data.filePath) {
               await checkFileAvailability(res.data.id);
@@ -277,7 +278,6 @@ const PolicyViewer = () => {
           } else {
             throw new Error('Policy not found in any cache');
           }
-        } else if (!isOnline && hasIndexedDBFile) {
           // We're offline but have both metadata and file in IndexedDB
           console.log('Using offline IndexedDB data');
         }
@@ -285,7 +285,6 @@ const PolicyViewer = () => {
         // Set the document data
         if (documentData) {
           setDoc(documentData);
-          
           // If we haven't checked IndexedDB file yet and we have filePath, do it now
           if (!hasIndexedDBFile && documentData.filePath) {
             await checkFileAvailability(documentData.id || id);
@@ -300,6 +299,11 @@ const PolicyViewer = () => {
   }, [id, isOnline]);
 
   const checkIndexedDBFile = async (policyId) => {
+    // Ensure valid key
+    if (!policyId || isNaN(Number(policyId))) {
+      console.warn('Invalid policyId for IndexedDB lookup:', policyId);
+      return false;
+    }
     try {
       console.log('Checking IndexedDB for policy:', policyId);
       const cachedDoc = await documentStorage.getDocument(policyId);
@@ -350,9 +354,10 @@ const PolicyViewer = () => {
         }
       }
 
-      // If not cached but we're online, try to fetch directly to verify availability
+      // If not cached but we're online, try to fetch from backend API (not Azure Blob Storage)
       if (isOnline) {
         try {
+          // Attempt to fetch the file from the backend API
           const response = await fetch(absoluteUrl, { method: 'HEAD' });
           setFileAvailable(response.ok);
           setIsFromIndexedDB(false);
@@ -410,13 +415,11 @@ const PolicyViewer = () => {
     if (isFromIndexedDB && documentURL) {
       return documentURL;
     }
-    // If filePath is an Azure URL, use it directly
-    if (isOnline && doc.filePath && doc.filePath.startsWith("http")) {
-      return doc.filePath;
-    }
+    // Always use backend API for online fallback if not cached
     if (isOnline) {
       return `${API_BASE}/api/policies/${doc.id}/file?token=${getToken()}`;
     }
+    // Offline fallback (may not work if not cached)
     return `/api/policies/${doc.id}/file?token=${getToken()}`;
   };
 
