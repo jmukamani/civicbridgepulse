@@ -96,7 +96,7 @@ const PolicyComments = ({ policyId, onCommentCount, modalMode }) => {
   );
 
   const renderReply = (c) => (
-    <div key={c.id} className="p-2 rounded max-w-xl bg-gray-50 border mb-2">
+    <div key={c.id} className="p-2 rounded max-w-xl bg-gray-200 border mb-2 text-gray-900">
       <div className="flex items-center gap-2">
         <span>
           {c.anonymous && c.author?.role === "citizen"
