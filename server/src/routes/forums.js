@@ -196,9 +196,24 @@ router.get("/threads/:id", authenticate(), async (req, res) => {
 // Create post in thread
 router.post("/threads/:id/posts", authenticate(), async (req, res) => {
   try {
-    const { content } = req.body;
+    const { content, anonymous, parentId } = req.body;
     if (!content) return res.status(400).json({ message: "content required" });
-    const post = await ForumPost.create({ threadId: req.params.id, authorId: req.user.id, content });
+    const isCitizen = req.user.role === "citizen";
+    // Only allow one level deep replies
+    let validParentId = null;
+    if (parentId) {
+      const parent = await ForumPost.findByPk(parentId);
+      if (parent && !parent.parentId) {
+        validParentId = parentId;
+      }
+    }
+    const post = await ForumPost.create({
+      threadId: req.params.id,
+      authorId: req.user.id,
+      content,
+      anonymous: isCitizen ? !!anonymous : false,
+      parentId: validParentId,
+    });
     await logInteraction(req.user.id, "forum_post", post.id);
     res.status(201).json(post);
   } catch (err) {

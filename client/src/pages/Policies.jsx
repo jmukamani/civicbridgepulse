@@ -9,6 +9,8 @@ import { toast } from "react-toastify";
 import { formatDistanceToNow } from "date-fns";
 import { API_BASE } from "../utils/network.js";
 import documentStorage from "../utils/documentStorage.js";
+import { FaCommentDots } from "react-icons/fa";
+import PolicyComments from "./PolicyComments.jsx";
 
 const PolicyList = () => {
   const [docs, setDocs] = useState([]);
@@ -211,6 +213,8 @@ const PolicyViewer = () => {
   const [fileAvailable, setFileAvailable] = useState(false);
   const [documentURL, setDocumentURL] = useState(null);
   const [isFromIndexedDB, setIsFromIndexedDB] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [commentCount, setCommentCount] = useState(0);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -297,6 +301,21 @@ const PolicyViewer = () => {
     };
     fetchDoc();
   }, [id, isOnline]);
+
+  // Fetch comment count for badge
+  useEffect(() => {
+    const fetchCount = async () => {
+      try {
+        const res = await axios.get(`${API_BASE}/api/policies/${id}/comments`, {
+          headers: { Authorization: `Bearer ${getToken()}` },
+        });
+        setCommentCount(Array.isArray(res.data) ? res.data.length : 0);
+      } catch {
+        setCommentCount(0);
+      }
+    };
+    fetchCount();
+  }, [id]);
 
   const checkIndexedDBFile = async (policyId) => {
     // Ensure valid key
@@ -613,67 +632,42 @@ const PolicyViewer = () => {
         </div>
       )}
 
-      <Comments policyId={id} />
+      {/* Floating Comments Button */}
+      <button
+        className="fixed bottom-8 right-8 z-50 bg-indigo-600 text-white rounded-full shadow-lg p-4 flex items-center gap-2 hover:bg-indigo-700 focus:outline-none"
+        onClick={() => setCommentsOpen(true)}
+        title="View Comments"
+      >
+        <FaCommentDots size={24} />
+        {commentCount > 0 && (
+          <span className="ml-1 bg-white text-indigo-600 rounded-full px-2 py-0.5 text-xs font-bold">{commentCount}</span>
+        )}
+      </button>
+
+      {/* Comments Modal */}
+      {commentsOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center p-4 border-b">
+              <h3 className="text-lg font-bold">Comments</h3>
+              <button onClick={() => setCommentsOpen(false)} className="text-gray-500 hover:text-red-500 text-2xl">&times;</button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              <Comments policyId={id} onCommentCount={setCommentCount} modalMode={true} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Remove inline <Comments /> */}
     </div>
   );
 };
 
 // Comments component
-const Comments = ({ policyId }) => {
-  const [comments, setComments] = useState([]);
-  const [content, setContent] = useState("");
-  const user = getUser();
-
-  const fetchComments = async () => {
-    try {
-      const res = await axios.get(`${API_BASE}/api/policies/${policyId}/comments`, {
-        headers: { Authorization: `Bearer ${getToken()}` },
-      });
-      setComments(res.data);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  useEffect(() => {
-    fetchComments();
-  }, [policyId]);
-
-  const postComment = async (e) => {
-    e.preventDefault();
-    try {
-      const res = await axios.post(
-        `${API_BASE}/api/policies/${policyId}/comments`,
-        { content },
-        { headers: { Authorization: `Bearer ${getToken()}` } }
-      );
-      setComments(res.data);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  return (
-    <div className="space-y-4 mt-4">
-      <form onSubmit={postComment} className="flex gap-2">
-        <input
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder="Add a comment"
-          className="border flex-1 px-2 py-1"
-          required
-        />
-        <button className="bg-indigo-600 text-white px-4 rounded">Post</button>
-      </form>
-      <ul className="space-y-2 text-sm">
-        {comments.map((c) => (
-          <li key={c.id} className="border p-2 rounded">
-            {c.content}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
+// Modal-aware Comments wrapper
+const Comments = ({ policyId, onCommentCount, modalMode }) => {
+  return <PolicyComments policyId={policyId} onCommentCount={onCommentCount} modalMode={modalMode} />;
 };
 
 // helper to cache files

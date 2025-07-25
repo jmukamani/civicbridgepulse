@@ -293,12 +293,11 @@ router.get("/:id", authenticate(), async (req, res) => {
  *         description: Policy document not found
  */
 
-// Serve file
+
 router.get("/:id/file", authenticate(), async (req, res) => {
   const doc = await PolicyDocument.findByPk(req.params.id);
   if (!doc) return res.sendStatus(404);
   if (doc.status !== "published" && req.user.role === "citizen") return res.sendStatus(403);
-  // If filePath is an Azure URL, stream from Azure Blob Storage
   if (doc.filePath.startsWith("http")) {
     try {
       const urlParts = doc.filePath.split("/");
@@ -316,7 +315,7 @@ router.get("/:id/file", authenticate(), async (req, res) => {
     }
     return;
   }
-  // Fallback for legacy local files
+
   res.sendFile(path.resolve(doc.filePath));
 });
 

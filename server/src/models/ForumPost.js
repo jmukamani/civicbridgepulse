@@ -24,6 +24,14 @@ ForumPost.init(
       type: DataTypes.TEXT,
       allowNull: false,
     },
+    anonymous: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    parentId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+    },
   },
   {
     sequelize,

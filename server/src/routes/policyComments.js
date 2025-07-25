@@ -3,6 +3,7 @@ import { authenticate } from "../middleware/auth.js";
 import PolicyComment from "../models/PolicyComment.js";
 import PolicyDocument from "../models/PolicyDocument.js";
 import { sendNotification } from "../utils/notify.js";
+import User from "../models/User.js";
 
 const router = express.Router();
 
@@ -59,6 +60,7 @@ router.get("/:policyId/comments", authenticate(), async (req, res) => {
     const comments = await PolicyComment.findAll({
       where: { policyId: req.params.policyId },
       order: [["createdAt", "ASC"]],
+      include: [{ model: User, as: "author", attributes: ["id", "role", "name"] }],
     });
     res.json(comments);
   } catch (err) {
@@ -104,12 +106,23 @@ router.get("/:policyId/comments", authenticate(), async (req, res) => {
 
 router.post("/:policyId/comments", authenticate(), async (req, res) => {
   try {
-    const { content } = req.body;
+    const { content, anonymous, parentId } = req.body;
     if (!content) return res.status(400).json({ message: "content required" });
+    const isCitizen = req.user.role === "citizen";
+    // Only allow one level deep replies
+    let validParentId = null;
+    if (parentId) {
+      const parent = await PolicyComment.findByPk(parentId);
+      if (parent && !parent.parentId) {
+        validParentId = parentId;
+      }
+    }
     const comment = await PolicyComment.create({
       policyId: req.params.policyId,
       authorId: req.user.id,
       content,
+      anonymous: isCitizen ? !!anonymous : false,
+      parentId: validParentId,
     });
 
     // Notify policy owner via Socket.io

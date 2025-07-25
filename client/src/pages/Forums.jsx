@@ -91,6 +91,8 @@ const ThreadList = ({ onOpen }) => {
 const ThreadView = ({ id, onBack }) => {
   const [thread, setThread] = useState(null);
   const [content, setContent] = useState("");
+  const [anonymous, setAnonymous] = useState(false);
+  const [replyTo, setReplyTo] = useState(null); // <-- new state
   const user = getUser();
   const fetchThread = async () => {
     try {
@@ -113,54 +115,116 @@ const ThreadView = ({ id, onBack }) => {
       if (navigator.onLine) {
         const { data: post } = await axios.post(
           `${API_BASE}/api/forums/threads/${id}/posts`,
-          { content },
+          { content, anonymous, parentId: replyTo },
           { headers: { Authorization: `Bearer ${getToken()}` } }
         );
         setThread((prev) => ({ ...prev, posts: [...prev.posts, post] }));
       } else {
-        await queueAction({ id: generateId(), type: "forumPost", payload: { threadId: id, content }, token: getToken() });
-        setThread((prev) => ({ ...prev, posts: [...prev.posts, { id: generateId(), content, authorId: user.id }] }));
+        await queueAction({ id: generateId(), type: "forumPost", payload: { threadId: id, content, anonymous, parentId: replyTo }, token: getToken() });
+        setThread((prev) => ({ ...prev, posts: [...prev.posts, { id: generateId(), content, authorId: user.id, anonymous, parentId: replyTo }] }));
         toast.info("Post queued");
       }
       setContent("");
+      setAnonymous(false);
+      setReplyTo(null);
     } catch (err) {
       toast.error("Could not post");
     }
   };
   if (!thread) return <p>Loading...</p>;
+  // Group posts by parentId
+  const topLevel = thread.posts?.filter(p => !p.parentId) || [];
+  const replies = thread.posts?.filter(p => p.parentId) || [];
+  const renderPost = (p) => {
+    const mine = user && p.authorId === user.id;
+    let bubbleClass = "self-start bg-gray-100";
+    if (mine) {
+      bubbleClass = "self-end bg-green-100";
+    } else if (p.author?.role === "representative") {
+      bubbleClass = "self-start bg-indigo-100";
+    }
+    return (
+      <li
+        key={p.id}
+        className={`max-w-xs rounded px-3 py-2 text-sm shadow ${bubbleClass} mb-2`}
+      >
+        <div className="flex items-center gap-2">
+          <span>
+            {p.anonymous && p.author?.role === "citizen"
+              ? "Anonymous"
+              : p.author?.role === "representative"
+                ? `Hon. ${p.author?.name}`
+                : p.author?.name || ""}
+          </span>
+          {p.author?.role === "representative" && (
+            <span className="ml-2 px-2 py-0.5 text-xs rounded bg-indigo-200 text-indigo-800">Representative</span>
+          )}
+        </div>
+        <div className="mt-1">{p.content}</div>
+        <div className="flex justify-between items-center mt-1">
+          <div className="text-xs opacity-70">{new Date(p.createdAt).toLocaleString()}</div>
+          <button className="text-xs text-indigo-600 hover:underline" onClick={() => {
+            setReplyTo(p.id);
+            setContent("");
+          }}>Reply</button>
+        </div>
+        {/* Render replies indented */}
+        <ul className="pl-6 mt-2">
+          {replies.filter(r => r.parentId === p.id).map(renderReply)}
+        </ul>
+      </li>
+    );
+  };
+  const renderReply = (p) => {
+    let bubbleClass = "self-start bg-gray-50 border";
+    return (
+      <li key={p.id} className={`max-w-xs rounded px-3 py-2 text-sm shadow ${bubbleClass} mb-2`}>
+        <div className="flex items-center gap-2">
+          <span>
+            {p.anonymous && p.author?.role === "citizen"
+              ? "Anonymous"
+              : p.author?.role === "representative"
+                ? `Hon. ${p.author?.name}`
+                : p.author?.name || ""}
+          </span>
+          {p.author?.role === "representative" && (
+            <span className="ml-2 px-2 py-0.5 text-xs rounded bg-indigo-200 text-indigo-800">Representative</span>
+          )}
+        </div>
+        <div className="mt-1">{p.content}</div>
+        <div className="text-xs mt-1 opacity-70 text-right">{new Date(p.createdAt).toLocaleString()}</div>
+      </li>
+    );
+  };
   return (
     <div>
       <button onClick={onBack} className="text-indigo-600 mb-2">← Back</button>
       <h2 className="text-lg font-bold mb-2">{thread.title}</h2>
       <ul className="flex flex-col space-y-2 mb-4">
-        {thread.posts?.map((p) => {
-          const mine = user && p.authorId === user.id;
-          let bubbleClass = "self-start bg-gray-100";
-          if (mine) {
-            bubbleClass = "self-end bg-green-100";
-          } else if (p.author?.role === "representative") {
-            bubbleClass = "self-start bg-indigo-100";
-          }
-          return (
-            <li
-              key={p.id}
-              className={`max-w-xs rounded px-3 py-2 text-sm shadow ${bubbleClass}`}
-            >
-              {p.content}
-            </li>
-          );
-        })}
-        {thread.posts?.length === 0 && <p>No replies yet.</p>}
+        {topLevel.map(renderPost)}
+        {topLevel.length === 0 && <p>No replies yet.</p>}
       </ul>
       {user && (
-        <form onSubmit={submit} className="flex gap-2">
+        <form onSubmit={submit} className="flex gap-2 items-center">
+          {replyTo && (
+            <div className="text-xs bg-gray-200 px-2 py-1 rounded flex items-center gap-2">
+              Replying to a post
+              <button className="ml-2 text-red-500" onClick={() => setReplyTo(null)}>Cancel</button>
+            </div>
+          )}
           <input
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="Write a reply"
+            placeholder={replyTo ? "Write a reply..." : "Write a post..."}
             className="border flex-1 px-2 py-1"
             required
           />
+          {user.role === "citizen" && (
+            <label className="flex items-center gap-1 text-xs">
+              <input type="checkbox" checked={anonymous} onChange={e => setAnonymous(e.target.checked)} />
+              Post anonymously
+            </label>
+          )}
           <button className="bg-indigo-600 text-white px-4 rounded">Post</button>
         </form>
       )}
