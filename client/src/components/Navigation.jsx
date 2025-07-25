@@ -37,6 +37,7 @@ const representativeLinks = [
 
 const adminLinks = [
   { to: "admin-dashboard", label: "Admin Dashboard" },
+  { to: "admin-leaderboard", label: "Leaderboard" },
   { to: "user-management", label: "User Management" },
   { to: "verification-queue", label: "Verification Queue" },
   { to: "messages", label: "Messages" },
@@ -62,10 +63,13 @@ const Navigation = ({ isOpen, onClose }) => {
   let links = [...baseLinks];
   if (role === "citizen") {
     links = [...links, ...citizenLinks];
+    // TODO: If leaderboard is enabled for citizens, add here
   } else if (role === "representative") {
     links = [...links, ...representativeLinks];
+    // TODO: If leaderboard is enabled for reps, add here
   } else if (role === "admin") {
-    links = [...links, ...adminLinks];
+    // Remove the first 'Dashboard' link for admin (since 'Admin Dashboard' is present)
+    links = adminLinks;
   }
 
   const NavLink = ({ to, label, disabled }) => {
@@ -108,7 +112,7 @@ const Navigation = ({ isOpen, onClose }) => {
             <XMarkIcon className="h-6 w-6" />
           </button>
         </div>
-        <nav className="mt-2 md:mt-4 space-y-1 px-2">
+        <nav className="mt-2 md:mt-4 space-y-1 px-2 pb-16"> {/* Add pb-16 for extra bottom padding */}
           {links.map((link, idx) => (
             <NavLink key={`${link.to}-${idx}`} {...link} />
           ))}

@@ -9,6 +9,7 @@ import useSocket from "../hooks/useSocket.js";
 import axios from "axios";
 import useOnlineStatus from "../hooks/useOnlineStatus.js";
 import { API_BASE } from "../utils/network.js";
+import RepresentativeRatingModal from "./RepresentativeRatingModal.jsx";
 
 const STATUS_OPTIONS = [
   { value: "reported", label: "Reported" },
@@ -48,11 +49,17 @@ const Issues = () => {
   const user = getUser();
   const socketRef = useSocket();
   const online = useOnlineStatus();
+  const [showRating, setShowRating] = useState({ open: false, repId: null, issueId: null });
+  const [ratedIssues, setRatedIssues] = useState([]); // prevent duplicate modals
+  const [showAll, setShowAll] = useState(false); // for rep toggle
+  const [detailsIssue, setDetailsIssue] = useState(null); // for rep view details modal
 
   const fetchIssues = async (params = {}) => {
     try {
+      const repParams = { ...params };
+      if (user.role === "representative") repParams.showAll = showAll;
       const res = await axios.get(`${API_BASE}/api/issues`, {
-        params,
+        params: repParams,
         headers: { Authorization: `Bearer ${getToken()}` },
       });
       setIssues(res.data);
@@ -68,7 +75,7 @@ const Issues = () => {
 
   useEffect(() => {
     fetchIssues();
-  }, []);
+  }, [showAll]);
 
   useEffect(() => {
     const handler = () => fetchIssues(filters);
@@ -106,6 +113,16 @@ const Issues = () => {
       const updated = await res.json();
       setIssues((prev) => prev.map((i) => (i.id === id ? updated : i)));
       toast.success("Status updated");
+      // Show rating modal if citizen, status is resolved, and not already rated
+      if (
+        user.role === "citizen" &&
+        status === "resolved" &&
+        updated.representativeId &&
+        !ratedIssues.includes(id)
+      ) {
+        setShowRating({ open: true, repId: updated.representativeId, issueId: updated.id });
+        setRatedIssues((prev) => [...prev, id]);
+      }
     } catch (err) {
       console.error(err);
       toast.error("Could not update status");
@@ -150,34 +167,66 @@ const Issues = () => {
     }
   };
 
+  // Show rating modal for already-resolved, assigned, unrated issues (citizen)
+  useEffect(() => {
+    if (user.role === "citizen" && issues.length > 0) {
+      const unrated = issues.find(
+        (i) =>
+          i.status === "resolved" &&
+          i.representativeId &&
+          !ratedIssues.includes(i.id)
+      );
+      if (unrated) {
+        setShowRating({ open: true, repId: unrated.representativeId, issueId: unrated.id });
+        setRatedIssues((prev) => [...prev, unrated.id]);
+      }
+    }
+    // eslint-disable-next-line
+  }, [issues]);
+
   return (
     <div className="space-y-6">
       {/* Filters */}
-      <div className="bg-white p-4 rounded shadow flex flex-wrap gap-4 items-end">
-        <div>
-          <label className="block text-xs font-medium text-gray-600">Status</label>
-          <select
-            className="border px-2 py-1 rounded"
-            value={filters.status}
-            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-          >
-            <option value="">All</option>
-            {STATUS_OPTIONS.map((s) => (
-              <option key={s.value} value={s.value}>
-                {s.label}
-              </option>
-            ))}
-          </select>
+      {(user.role === "citizen" || user.role === "admin") && (
+        <div className="bg-white p-4 rounded shadow flex flex-wrap gap-4 items-end">
+          <div>
+            <label className="block text-xs font-medium text-gray-600">Status</label>
+            <select
+              className="border px-2 py-1 rounded"
+              value={filters.status}
+              onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+            >
+              <option value="">All</option>
+              {STATUS_OPTIONS.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600">Search</label>
+            <input
+              className="border px-2 py-1 rounded"
+              placeholder="Search title…"
+              onChange={(e) => debouncedSearch(e.target.value)}
+            />
+          </div>
         </div>
-        <div>
-          <label className="block text-xs font-medium text-gray-600">Search</label>
-          <input
-            className="border px-2 py-1 rounded"
-            placeholder="Search title…"
-            onChange={(e) => debouncedSearch(e.target.value)}
-          />
+      )}
+      {user.role === "representative" && (
+        <div className="bg-white p-4 rounded shadow flex flex-wrap gap-4 items-center">
+          <label className="flex items-center gap-2 text-sm font-medium">
+            <input
+              type="checkbox"
+              checked={showAll}
+              onChange={e => setShowAll(e.target.checked)}
+            />
+            Show All Issues
+          </label>
+          <span className="text-xs text-gray-500">(Uncheck to see only issues relevant to your specialization)</span>
         </div>
-      </div>
+      )}
 
       <h2 className="text-lg font-bold">All Issues</h2>
       <div className="overflow-x-auto bg-white rounded shadow">
@@ -186,9 +235,9 @@ const Issues = () => {
             <tr>
               <th className="px-4 py-2 text-left">Title</th>
               <th className="px-4 py-2 text-left">Category</th>
-              <th className="px-4 py-2">Status</th>
-              <th className="px-4 py-2">Location</th>
-              <th className="px-4 py-2">Actions</th>
+              <th className="px-4 py-2 text-center align-middle">Status</th>
+              <th className="px-4 py-2 text-center align-middle">Location</th>
+              <th className="px-4 py-2 text-center align-middle">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -196,20 +245,23 @@ const Issues = () => {
               <tr key={issue.id} className="border-t">
                 <td className="px-4 py-2">{issue.title}</td>
                 <td className="px-4 py-2 capitalize">{issue.category}</td>
-                <td className="px-4 py-2">
+                <td className="px-4 py-2 text-center align-middle">
                   <span
-                    className={`px-2 py-1 rounded text-xs font-medium ${
+                    className={`inline-block min-w-[80px] text-center px-2 py-1 rounded text-xs font-medium ${
                       statusColors[issue.status] || "bg-gray-100"
                     }`}
                   >
                     {getStatusLabel(issue.status)}
                   </span>
                 </td>
-                <td className="px-4 py-2 text-xs">{issue.location || "-"}</td>
-                <td className="px-4 py-2">
+                <td className="px-4 py-2 text-center align-middle text-xs">{issue.location || "-"}</td>
+                <td className="px-4 py-2 text-center align-middle" style={{ minWidth: 48 }}>
                   <ActionMenu
                     actions={[
                       { label: "Timeline", onClick: () => openTimeline(issue) },
+                      ...(user.role === "representative"
+                        ? [{ label: "View Details", onClick: () => setDetailsIssue(issue) }]
+                        : []),
                       ...(user.role === "representative"
                         ? STATUS_OPTIONS.filter((s) => s.value !== issue.status).map((s) => ({
                             label: `Set ${s.label}`,
@@ -277,6 +329,37 @@ const Issues = () => {
         <div className="mt-6">
           <IssueForm onCreated={onCreated} />
         </div>
+      )}
+      <RepresentativeRatingModal
+        open={showRating.open}
+        onClose={() => setShowRating({ open: false, repId: null, issueId: null })}
+        representativeId={showRating.repId}
+        issueId={showRating.issueId}
+      />
+      {/* Issue Details Modal for Representatives */}
+      {detailsIssue && (
+        <Dialog open={true} onClose={() => setDetailsIssue(null)} className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen p-4">
+            <Dialog.Overlay className="fixed inset-0 bg-black opacity-50" />
+            <div className="bg-white max-w-lg w-full p-6 rounded shadow-lg relative z-10">
+              <h3 className="text-lg font-semibold mb-4">Issue Details</h3>
+              <div className="space-y-2 text-sm">
+                <div><strong>Title:</strong> {detailsIssue.title}</div>
+                <div><strong>Description:</strong> {detailsIssue.description}</div>
+                <div><strong>Category:</strong> {detailsIssue.category}</div>
+                <div><strong>Status:</strong> {getStatusLabel(detailsIssue.status)}</div>
+                <div><strong>Location:</strong> {detailsIssue.location || "-"}</div>
+                <div><strong>Priority:</strong> {detailsIssue.priority || "-"}</div>
+                <div><strong>Created:</strong> {new Date(detailsIssue.createdAt).toLocaleString()}</div>
+              </div>
+              <div className="text-right mt-4">
+                <button className="px-4 py-2 bg-indigo-600 text-white rounded" onClick={() => setDetailsIssue(null)}>
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </Dialog>
       )}
     </div>
   );

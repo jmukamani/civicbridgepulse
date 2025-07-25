@@ -154,63 +154,27 @@ router.post("/", authenticate("citizen"), async (req, res) => {
 // Enhanced list with filters & search
 router.get("/", authenticate(), async (req, res) => {
   try {
-    const { status, category, priority, q, from, to, showAll } = req.query;
-    const where = {};
-
-    // Scope by county
-    const userCounty = req.user.county;
-    if (userCounty) where.county = userCounty;
-
-    // Restrict citizens to their own issues only
+    let where = {};
     if (req.user.role === "citizen") {
       where.citizenId = req.user.id;
-    }
-
-    // For representatives, filter by relevant issues based on specializations
-    if (req.user.role === "representative" && req.user.specializations && !showAll) {
-      const userSpecializations = req.user.specializations || [];
-      const relevantCategories = [];
-      
-      // Find categories that match the representative's specializations
-      for (const [cat, specs] of Object.entries(categoryToSpecializationMap)) {
-        if (specs.length === 0 || specs.some(spec => userSpecializations.includes(spec))) {
-          relevantCategories.push(cat);
+    } else if (req.user.role === "representative") {
+      // Representatives: show all issues if showAll=true, else filter by specialization
+      if (!req.query.showAll || req.query.showAll === 'false') {
+        const userSpecs = req.user.specializations || [];
+        const relevantCategories = Object.entries(categoryToSpecializationMap)
+          .filter(([cat, specs]) => specs.length === 0 || specs.some(spec => userSpecs.includes(spec)))
+          .map(([cat]) => cat);
+        if (relevantCategories.length > 0) {
+          where.category = { [Op.in]: relevantCategories };
         }
       }
-      
-      if (relevantCategories.length > 0) {
-        where.category = { [Op.in]: relevantCategories };
-      }
     }
-
-    if (status) where.status = status;
-    if (category) where.category = category;
-    if (priority) where.priority = priority;
-    if (from || to) {
-      where.createdAt = {};
-      if (from) where.createdAt[Op.gte] = new Date(from);
-      if (to) where.createdAt[Op.lte] = new Date(to);
-    }
-    if (q) {
-      where.title = { [Op.iLike]: `%${q}%` };
-    }
-
-    const issues = await Issue.findAll({ 
-      where, 
-      order: [["createdAt", "DESC"]],
-      include: [
-        {
-          model: User,
-          as: "citizen",
-          attributes: ["id", "name", "email"]
-        },
-        {
-          model: User,
-          as: "representative",
-          attributes: ["id", "name", "email", "specializations"]
-        }
-      ]
-    });
+    // Optionally add filters from query params (status, category, etc.)
+    if (req.query.status) where.status = req.query.status;
+    if (req.query.category) where.category = req.query.category;
+    if (req.query.priority) where.priority = req.query.priority;
+    if (req.query.q) where.title = { [Op.iLike]: `%${req.query.q}%` };
+    const issues = await Issue.findAll({ where, order: [["createdAt", "DESC"]] });
     res.json(issues);
   } catch (err) {
     console.error(err);

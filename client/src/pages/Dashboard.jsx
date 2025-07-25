@@ -25,6 +25,7 @@ import RepPerformance from "./RepPerformance.jsx";
 import ProtectedRoute from "../components/ProtectedRoute.jsx";
 import PolicyComments from "./PolicyComments.jsx";
 import EventManagement from "./EventManagement.jsx";
+import RepLeaderboard from "./RepLeaderboard.jsx";
 
 const Overview = () => {
   const user = getUser();
@@ -58,6 +59,7 @@ const Dashboard = () => {
         <Route path="my-analytics" element={<CitizenAnalytics />} />
         <Route path="performance" element={<RepPerformance />} />
         <Route path="events" element={<EventManagement />} />
+        <Route path="admin-leaderboard" element={<ProtectedRoute role="admin"><RepLeaderboard /></ProtectedRoute>} />
         
         {/* Admin routes */}
         <Route path="admin-dashboard" element={<AdminDashboard />} />
