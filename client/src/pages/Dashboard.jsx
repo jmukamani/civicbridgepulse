@@ -26,6 +26,8 @@ import ProtectedRoute from "../components/ProtectedRoute.jsx";
 import PolicyComments from "./PolicyComments.jsx";
 import EventManagement from "./EventManagement.jsx";
 import RepLeaderboard from "./RepLeaderboard.jsx";
+import CitizenLeaderboard from "./CitizenLeaderboard.jsx";
+import RepresentativeLeaderboard from "./RepresentativeLeaderboard.jsx";
 
 const Overview = () => {
   const user = getUser();
@@ -60,6 +62,8 @@ const Dashboard = () => {
         <Route path="performance" element={<RepPerformance />} />
         <Route path="events" element={<EventManagement />} />
         <Route path="admin-leaderboard" element={<ProtectedRoute role="admin"><RepLeaderboard /></ProtectedRoute>} />
+        <Route path="leaderboard" element={<CitizenLeaderboard />} />
+        <Route path="rep-leaderboard" element={<RepresentativeLeaderboard />} />
         
         {/* Admin routes */}
         <Route path="admin-dashboard" element={<AdminDashboard />} />

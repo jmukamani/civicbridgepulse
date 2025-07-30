@@ -41,13 +41,22 @@ const RepLeaderboard = () => {
 
   const updateVisibility = async (field, value) => {
     try {
+      const token = getToken();
+      console.log('Making request with token:', token ? 'Token exists' : 'No token');
+      console.log('User role:', user?.role);
+      
       const res = await axios.patch(
         `${API_BASE}/api/representatives/leaderboard-visibility`,
         { [field]: value },
-        { headers: { Authorization: `Bearer ${getToken()}` } }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       setVisibility(res.data);
-    } catch {}
+    } catch (err) {
+      console.error('Error updating visibility:', err.response?.data || err.message);
+      console.error('Full error:', err);
+      // Show error to user
+      setError(`Failed to update visibility: ${err.response?.data?.message || err.message}`);
+    }
   };
 
   if (user?.role !== "admin") {

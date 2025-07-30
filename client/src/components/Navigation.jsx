@@ -3,6 +3,7 @@ import { getUser } from "../utils/auth.js";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import useOnlineStatus from "../hooks/useOnlineStatus.js";
 import useNotifications from "../hooks/useNotifications.js";
+import useLeaderboardVisibility from "../hooks/useLeaderboardVisibility.js";
 import { useTranslation } from "react-i18next";
 
 
@@ -59,14 +60,21 @@ const Navigation = ({ isOpen, onClose }) => {
   const location = useLocation();
   const online = useOnlineStatus();
   const { unreadCount } = useNotifications();
+  const { isVisibleToUser } = useLeaderboardVisibility();
 
   let links = [...baseLinks];
   if (role === "citizen") {
     links = [...links, ...citizenLinks];
-    // TODO: If leaderboard is enabled for citizens, add here
+    // Add leaderboard link if enabled for citizens
+    if (isVisibleToUser) {
+      links.push({ to: "leaderboard", label: "Leaderboard" });
+    }
   } else if (role === "representative") {
     links = [...links, ...representativeLinks];
-    // TODO: If leaderboard is enabled for reps, add here
+    // Add leaderboard link if enabled for representatives
+    if (isVisibleToUser) {
+      links.push({ to: "rep-leaderboard", label: "Leaderboard" });
+    }
   } else if (role === "admin") {
     // Remove the first 'Dashboard' link for admin (since 'Admin Dashboard' is present)
     links = adminLinks;

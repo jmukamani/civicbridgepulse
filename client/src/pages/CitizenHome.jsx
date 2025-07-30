@@ -7,6 +7,7 @@ import axios from "axios";
 import ResourceCard from "../components/ResourceCard.jsx";
 import { API_BASE } from "../utils/network.js";
 import useOnlineStatus from "../hooks/useOnlineStatus.js";
+import useLeaderboardVisibility from "../hooks/useLeaderboardVisibility.js";
 import documentStorage from "../utils/documentStorage.js";
 import { DocumentIcon, CloudArrowDownIcon } from "@heroicons/react/24/outline";
 
@@ -43,6 +44,7 @@ const CitizenHome = () => {
   const [recentResources, setRecentResources] = useState([]);
   const [offlineStats, setOfflineStats] = useState({ count: 0, totalSizeMB: 0 });
   const online = useOnlineStatus();
+  const { isVisibleToUser } = useLeaderboardVisibility();
 
   useEffect(() => {
     const load = async () => {
@@ -121,6 +123,26 @@ const CitizenHome = () => {
           Join Community Discussion
         </Link>
       </div>
+      
+      {/* Leaderboard Quick Access */}
+      {isVisibleToUser && (
+        <div className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white p-4 rounded-lg shadow-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold">🏆 Representative Leaderboard</h3>
+              <p className="text-purple-100 text-sm mt-1">
+                See how your representatives are performing based on citizen feedback
+              </p>
+            </div>
+            <Link 
+              to="leaderboard" 
+              className="bg-white text-purple-600 px-4 py-2 rounded font-semibold hover:bg-purple-50 transition-colors"
+            >
+              View Leaderboard
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* My Civic Activity */}
       <div className="grid gap-4 md:grid-cols-3">

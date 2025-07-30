@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { getUser, getToken } from "../utils/auth.js";
 import { formatDateTime } from "../utils/datetime.js";
 import useSocket from "../hooks/useSocket.js";
+import useLeaderboardVisibility from "../hooks/useLeaderboardVisibility.js";
 import { toast } from "react-toastify";
 import ActionMenu from "../components/ActionMenu.jsx";
 import ResourceCard from "../components/ResourceCard.jsx";
@@ -33,6 +34,7 @@ const RepresentativeHome = () => {
   const [recentResources, setRecentResources] = useState([]);
   const socketRef = useSocket();
   const navigate = useNavigate();
+  const { isVisibleToUser } = useLeaderboardVisibility();
 
   useEffect(() => {
     const load = async () => {
@@ -117,6 +119,26 @@ const RepresentativeHome = () => {
           <span className="text-lg">+</span> Create New Policy
         </Link>
       </div>
+      
+      {/* Leaderboard Quick Access */}
+      {isVisibleToUser && (
+        <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-4 rounded-lg shadow-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold">🏆 Performance Leaderboard</h3>
+              <p className="text-blue-100 text-sm mt-1">
+                See how you rank among your colleagues based on citizen feedback
+              </p>
+            </div>
+            <Link 
+              to="rep-leaderboard" 
+              className="bg-white text-blue-600 px-4 py-2 rounded font-semibold hover:bg-blue-50 transition-colors"
+            >
+              View Leaderboard
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Stat cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

@@ -19,18 +19,30 @@ export const authenticate = (roles = []) => {
       token = req.query.token;
     }
 
+    console.log('Auth middleware:', {
+      path: req.path,
+      method: req.method,
+      hasAuthHeader: !!authHeader,
+      tokenLength: token ? token.length : 0,
+      roles: roles,
+      jwtSecret: process.env.JWT_SECRET ? 'exists' : 'missing'
+    });
+
     if (!token) {
       return res.status(401).json({ message: "No token provided" });
     }
 
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      console.log('Token decoded successfully:', { role: decoded.role, id: decoded.id });
       req.user = decoded;
       if (roles.length && !roles.includes(decoded.role)) {
+        console.log('Role mismatch:', { required: roles, actual: decoded.role });
         return res.status(403).json({ message: "Forbidden" });
       }
       return next();
     } catch (err) {
+      console.log('Token verification failed:', err.message);
       return res.status(401).json({ message: "Invalid token" });
     }
   };

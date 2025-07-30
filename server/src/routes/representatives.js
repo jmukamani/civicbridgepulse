@@ -6,8 +6,8 @@ import RepresentativeRating from "../models/RepresentativeRating.js";
 const router = express.Router();
 
 // In-memory leaderboard visibility (for demo)
-let leaderboardVisibleToCitizens = false;
-let leaderboardVisibleToReps = false;
+let leaderboardVisibleToCitizens = true; // Enabled for citizens
+let leaderboardVisibleToReps = false; // Disabled for representatives
 
 // POST /api/representatives/:id/ratings - Citizen submits a rating after issue/message resolved
 router.post("/:id/ratings", authenticate(["citizen"]), async (req, res) => {
@@ -91,11 +91,25 @@ router.get("/leaderboard", authenticate(), async (req, res) => {
   }
 });
 
+// GET /api/representatives/leaderboard-visibility - Get current leaderboard visibility settings
+router.get("/leaderboard-visibility", authenticate(), async (req, res) => {
+  res.json({ citizens: leaderboardVisibleToCitizens, representatives: leaderboardVisibleToReps });
+});
+
 // PATCH /api/representatives/leaderboard-visibility - Admin toggles leaderboard visibility
 router.patch("/leaderboard-visibility", authenticate(["admin"]), async (req, res) => {
+  console.log('Admin updating leaderboard visibility:', { 
+    user: req.user, 
+    body: req.body,
+    authHeader: req.headers.authorization 
+  });
+  
   const { citizens, representatives } = req.body;
   if (typeof citizens === "boolean") leaderboardVisibleToCitizens = citizens;
   if (typeof representatives === "boolean") leaderboardVisibleToReps = representatives;
+  
+  console.log('Updated visibility:', { citizens: leaderboardVisibleToCitizens, representatives: leaderboardVisibleToReps });
+  
   res.json({ citizens: leaderboardVisibleToCitizens, representatives: leaderboardVisibleToReps });
 });
 
